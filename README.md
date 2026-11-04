@@ -1,4 +1,4 @@
-# Wildfire Data Fabric / FireGUard
+# Wildfire Data Fabric / FireGuard
 
 FireGUard demonstrates how agents can connect a reported wildfire location, current source data, evacuation/crew simulations and cited guidance. It combines a React UI, Strands/AgentCore agents, a FastAPI backend (`backend/`) and a SUMO traffic-simulator worker (`traffic-simulator/`); the former Wildfire Corridor Lab repository merged into this one on October 3, 2026.
 
