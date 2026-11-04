@@ -1,0 +1,13 @@
+# Build context is the repository root; send only what this image needs.
+*
+!requirements-lock.txt
+!requirements-dev.txt
+!pyproject.toml
+!deployment/settings.toml
+!traffic-simulator/requirements.txt
+!traffic-simulator/requirements-sumo.txt
+!traffic-simulator/traffic_simulator/
+!traffic-simulator/tests/
+!traffic-simulator/scripts/
+**/__pycache__
+**/.runtime

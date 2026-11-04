@@ -1,0 +1,26 @@
+{
+  "commands": {
+    "test": [".venv/bin/python", "scripts/check_quality.py", "test"],
+    "lint": [".venv/bin/python", "scripts/check_quality.py", "lint"]
+  },
+  "coverage": {
+    "argv": [".venv/bin/python", "scripts/check_quality.py", "coverage"],
+    "report": "coverage.lcov", "format": "lcov", "suffixes": [".py"],
+    "version": [".venv/bin/python", "-m", "coverage", "--version"], "pinned": "7.16.2",
+    "timeout_seconds": 900
+  },
+  "scanners": [
+    {"name": "npm-audit-ui", "kind": "sca", "format": "exit",
+     "argv": ["npm", "--prefix", "ui", "audit", "--audit-level=moderate"], "files": "none",
+     "suffixes": ["package.json", "package-lock.json"],
+     "version": ["npm", "--version"], "pinned": "11.19.0", "timeout_seconds": 120},
+    {"name": "npm-audit-infra", "kind": "sca", "format": "exit",
+     "argv": ["npm", "--prefix", "deployment/infra", "audit", "--audit-level=moderate"], "files": "none",
+     "suffixes": ["package.json", "package-lock.json"],
+     "version": ["npm", "--version"], "pinned": "11.19.0", "timeout_seconds": 120},
+    {"name": "pip-audit", "kind": "sca", "format": "exit",
+     "argv": ["pip-audit", "--requirement", "requirements-lock.txt", "--no-deps", "--disable-pip", "--progress-spinner", "off"], "files": "none",
+     "suffixes": ["requirements-lock.txt"],
+     "version": ["pip-audit", "--version"], "pinned": "pip-audit 2.10.1", "timeout_seconds": 180}
+  ]
+}

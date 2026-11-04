@@ -1,0 +1,99 @@
+/* Guided layout and shared workspace controls. Simulation panel presentation lives in lab-presentation.css. */
+.evac-workspace { box-sizing:border-box; background:var(--workspace-bg,#f1f4f1); color:var(--ink,#21383d); padding:20px 32px;
+  text-align:left; width:100%; max-width:none; margin:0; }
+.evac-workspace [hidden] { display:none !important; }
+.evac-heading { display:flex; align-items:start; justify-content:space-between; gap:20px; }
+.evac-heading h1 { font-size:28px; margin:6px 0; }
+.evac-workspace .eyebrow { font-size:11px; letter-spacing:.12em; color:#41696a; font-weight:700; }
+.evac-workspace p { line-height:1.55; }
+.evac-modes, .evac-map-toolbar-actions, .evac-replay { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.evac-modes { margin:0 0 14px; }
+.evac-workspace button { background:var(--accent,#126667); color:white; border:1px solid transparent; padding:10px 14px;
+  border-radius:7px; font-size:13px; cursor:pointer; }
+.evac-workspace button:disabled { opacity:.5; cursor:not-allowed; }
+.evac-workspace button[aria-selected="false"], .evac-workspace button[aria-pressed="false"],
+.evac-workspace button.secondary, .evac-workspace .situation-controls button { background:white; color:#294b4c; border-color:#bacaca; }
+.evac-workspace button:focus-visible, .evac-workspace input:focus-visible, .evac-workspace textarea:focus-visible {
+  outline:3px solid #e09d36; outline-offset:2px; }
+.evac-columns { display:grid; grid-template-columns:minmax(300px,360px) minmax(0,1fr); gap:20px;
+  align-items:start; max-width:1600px; margin:auto; }
+.evac-investigation { grid-column:1; grid-row:1; min-width:0; display:grid; grid-template-columns:minmax(0,1fr); gap:14px; padding:0;
+  border:0; background:transparent; position:sticky; top:12px; max-height:calc(100dvh - 24px); overflow:auto; }
+.context-view { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; min-width:0; }
+.evac-investigation > section, .context-view > section, .context-view > label, .context-view > details {
+  min-width:0; background:white; padding:16px; border:1px solid #d9e3e2; border-radius:10px; overflow-wrap:anywhere; }
+.context-tabs { display:flex; gap:6px; }.context-tabs button { flex:1; padding:10px 6px; }
+/* The findings status line stays mounted for screen readers; while empty it takes no space. */
+.response-findings > [role="status"]:empty { margin:0; }
+.evac-investigation h2 { font-size:19px; margin-top:0; }
+.evac-workspace h3 { font-size:16px; margin-top:0; }
+.evac-workspace label { display:block; font-size:13px; font-weight:600; margin-bottom:10px; }
+.evac-workspace select, .evac-workspace input:not([type="range"]), .evac-workspace textarea {
+  display:block; box-sizing:border-box; width:100%; margin:7px 0; padding:10px; background:white;
+  border:1px solid #bacaca; color:#173333; border-radius:6px; font:inherit; }
+.evac-workspace textarea { min-height:95px; resize:vertical; }
+.evac-workspace audio, .evac-workspace progress { display:block; width:100%; max-width:100%; min-width:0; }
+.evac-workspace blockquote { margin:12px 0; padding-left:12px; border-left:3px solid #bacaca; overflow-wrap:anywhere; }
+.evac-workspace pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:11px; }
+.evac-viewer { grid-column:2; grid-row:1; background:white; border:1px solid #d9e3e2; border-radius:12px; overflow:hidden; min-width:0; }
+.evac-map-toolbar { display:flex; flex-direction:column; align-items:start; gap:10px; padding:14px 16px; font-weight:600; overflow-wrap:anywhere; }
+.evac-workspace .simulation-map { height:clamp(360px,50vh,620px); width:100%; background:#dfe8df; }
+.evac-replay, .evac-replay-totals, .evac-details, .evac-empty { padding:16px; }
+.evac-replay label { flex:1; margin:0; min-width:160px; }
+.evac-replay input { width:100%; }.evac-replay-totals { background:#eaf4f1; }
+.evac-workspace article { margin:12px 0; padding:14px; background:#f4f8f7; border-radius:8px; overflow-wrap:anywhere; }
+.evac-conversation article p { white-space:pre-wrap; }.evac-suggestions { display:flex; flex-wrap:wrap; gap:6px; }
+.evac-message-history { max-height:24rem; overflow:auto; margin-bottom:14px; }
+.evac-suggestions button { font-size:12px; background:#eaf4f1; color:#245756; text-align:left; }
+.evac-activity ol { padding-left:20px; font-size:13px; }.evac-activity li { margin:8px 0; }
+.evac-error { margin:12px 0; background:#fff2e9; color:#8c2d10; border:1px solid #e5b494; padding:14px; border-radius:8px; }
+.evac-workspace table { width:100%; border-collapse:collapse; font-size:13px; }
+.evac-workspace th, .evac-workspace td { text-align:left; padding:12px 9px; border-bottom:1px solid #d9e3e2; vertical-align:top; }
+.evac-workspace td .locate-crew { padding:8px 10px; font-size:12px; white-space:nowrap; }
+.evac-workspace td .locate-crew + small { display:block; margin-top:8px; }
+.evac-workspace details { margin:14px 0; }.evac-workspace summary { cursor:pointer; font-weight:600; }
+.evac-workspace .mission-grid, .evac-workspace .takeaway-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+.evac-workspace dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; font-size:13px; }
+.evac-workspace dt { color:var(--muted,#526b6b); }.evac-workspace dd { margin:3px 0 0; font-weight:600; }
+.evac-workspace .mission-change { display:block; font-size:12px; margin-top:3px; }
+.evac-workspace .improved { color:#186b49; }.evac-workspace .worse { color:#a04c14; }
+.evac-workspace .mission-objective { padding:10px 0; border-bottom:1px solid #d9e3e2; }
+.evac-workspace .mission-boundary, .evac-workspace small { color:var(--muted,#526b6b); font-size:12px; line-height:1.5; }
+.evac-workspace .table-scroll { overflow-x:auto; }.evac-workspace svg { max-width:100%; }
+.evac-workspace .focused-crew { background:#dcf1ed; outline:2px solid #126667; }
+.evac-workspace .situation-controls, .evac-workspace .metrics, .evac-workspace .scenario-nav,
+.evac-workspace .policy-insights, .evac-workspace .source-preview, .evac-workspace .replay-status { margin:14px; }
+.evac-workspace .scenario-nav { position:static; flex-wrap:wrap; }
+.evac-workspace .scenario-nav button { flex:1 1 120px; }
+.evac-workspace input[type="checkbox"] { display:inline-block; width:auto; margin:0; padding:0; }
+.evac-workspace .situation-controls label, .evac-workspace .route-controls label { display:flex; align-items:center; gap:8px; margin:0; }
+.evac-workspace .evac-replay label:has(select) { flex:0 0 110px; min-width:110px; }
+.evac-workspace .network-validation { border-left:3px solid #23664e; padding:0 12px; background:#eaf4eb; }
+.evac-workspace .source-preview button.secondary { background:#126667; border-color:#126667; color:white; }
+.evac-workspace .source-records button { white-space:nowrap; padding:7px 10px; }
+.evac-workspace .maplibregl-ctrl button { background:white; padding:0; border-radius:0; }
+.evac-workspace .map-caption { max-width:calc(100% - 90px); overflow-wrap:anywhere; }
+.evac-workspace .map-hint { font-size:11px; }
+.incident-locations { display:grid; grid-template-columns:minmax(0,1fr); gap:8px; }
+.evac-workspace .incident-location { text-align:left; display:grid; gap:5px; width:100%; min-width:0; border:1px solid #bacaca; padding:12px; }
+.evac-workspace .incident-location span { font-size:12px; font-weight:400; }
+.evac-workspace .incident-location[aria-pressed="true"] { background:#e5eeea; color:#21383d; border-color:#126667; box-shadow:inset 3px 0 #126667; }
+.evac-workspace .selected-observation { padding:14px 0; background:white; }
+.evac-workspace .selected-fire-action { margin:12px 0; }
+.evac-workspace .selected-fire-action button { width:100%; white-space:normal; }
+.evac-workspace .selected-fire-action p { font-size:12px; }
+.incident-forecast { border-top:1px solid #d9e3e2; padding-top:16px; margin-top:16px; }
+.simulation-workspace .simulation-heading { padding-bottom:0; }
+.simulation-workspace .workflow-note { color:#41545e; font-size:13px; line-height:1.6; margin:8px 0 0; }
+.workflow-current { max-width:1600px; margin:8px auto 14px; color:#294b4c; font-size:13px; }
+.workflow-progress li[data-status="running"], .workflow-progress li[data-status="preparing"] { border-left:4px solid #126667; }
+.workflow-progress li[data-status="failed"] { border-left:4px solid #a44820; }
+@media(max-width:1100px) { .evac-columns { grid-template-columns:minmax(280px,320px) minmax(0,1fr); gap:16px; } }
+@media(max-width:900px) { .evac-columns { grid-template-columns:minmax(0,1fr); }.evac-investigation { grid-column:1; grid-row:2; position:static; max-height:none; overflow:visible; }
+  .evac-viewer { grid-column:1; grid-row:1; } .evac-workspace { padding:16px; }.evac-workspace .mission-grid { grid-template-columns:1fr; }
+  .evac-workspace .workflow-progress { display:flex; overflow-x:auto; }.evac-workspace .workflow-progress li { flex:0 0 180px; }
+  .evac-workspace .simulation-map { height:60vh; min-height:380px; } }
+
+.simulation-heading .workspace-heading { margin-bottom:12px; }
+.evac-workspace .workflow-progress { margin:0 auto 8px; }
+.evac-workspace .workflow-progress li { padding:10px; }

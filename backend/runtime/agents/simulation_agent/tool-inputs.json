@@ -1,0 +1,523 @@
+{
+  "create_simulation_variant": {
+    "additionalProperties": false,
+    "properties": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "additionalProperties": false,
+            "properties": {
+              "departure_minutes": {
+                "anyOf": [
+                  {
+                    "maximum": 45,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "vehicles": {
+                "anyOf": [
+                  {
+                    "maximum": 1500,
+                    "minimum": 20,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              }
+            },
+            "type": "object"
+          },
+          "input_mode": {
+            "const": "frozen_parent",
+            "default": "frozen_parent",
+            "type": "string"
+          },
+          "parent_run_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent_run_id",
+          "changes"
+        ],
+        "type": "object"
+      }
+    },
+    "required": [
+      "payload"
+    ],
+    "type": "object"
+  },
+  "get_simulation_evidence": {
+    "additionalProperties": false,
+    "properties": {
+      "payload": {
+        "oneOf": [
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cursor": {
+                "anyOf": [
+                  {
+                    "maxLength": 300,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "policy_ids": {
+                "items": {
+                  "enum": [
+                    "baseline",
+                    "coordinated",
+                    "phased"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "type": "array"
+              },
+              "run_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 1,
+                "type": "array"
+              },
+              "time_scope": {
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "const": "final",
+                    "default": "final",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "view": {
+                "const": "outcomes",
+                "type": "string"
+              }
+            },
+            "required": [
+              "run_ids",
+              "view"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "crew_id": {
+                "anyOf": [
+                  {
+                    "pattern": "^crew-[0-9]{1,3}$",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "cursor": {
+                "anyOf": [
+                  {
+                    "maxLength": 300,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "policy_ids": {
+                "items": {
+                  "enum": [
+                    "baseline",
+                    "coordinated",
+                    "phased"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "type": "array"
+              },
+              "run_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 1,
+                "type": "array"
+              },
+              "time_scope": {
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "const": "final",
+                    "default": "final",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "view": {
+                "const": "crew",
+                "type": "string"
+              }
+            },
+            "required": [
+              "run_ids",
+              "view"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cursor": {
+                "anyOf": [
+                  {
+                    "maxLength": 300,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "run_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 1,
+                "type": "array"
+              },
+              "view": {
+                "const": "sources",
+                "type": "string"
+              }
+            },
+            "required": [
+              "run_ids",
+              "view"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cursor": {
+                "anyOf": [
+                  {
+                    "maxLength": 300,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "run_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 1,
+                "type": "array"
+              },
+              "view": {
+                "const": "assumptions",
+                "type": "string"
+              }
+            },
+            "required": [
+              "run_ids",
+              "view"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cursor": {
+                "anyOf": [
+                  {
+                    "maxLength": 300,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "policy_ids": {
+                "items": {
+                  "enum": [
+                    "baseline",
+                    "coordinated",
+                    "phased"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "type": "array"
+              },
+              "run_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 1,
+                "type": "array"
+              },
+              "time_scope": {
+                "additionalProperties": false,
+                "properties": {
+                  "kind": {
+                    "const": "replay",
+                    "type": "string"
+                  },
+                  "requested_time_s": {
+                    "maximum": 3600,
+                    "minimum": 0,
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "requested_time_s"
+                ],
+                "type": "object"
+              },
+              "view": {
+                "const": "replay",
+                "type": "string"
+              }
+            },
+            "required": [
+              "run_ids",
+              "view",
+              "time_scope"
+            ],
+            "type": "object"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "cursor": {
+                "anyOf": [
+                  {
+                    "maxLength": 300,
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "default": null
+              },
+              "policy_ids": {
+                "items": {
+                  "enum": [
+                    "baseline",
+                    "coordinated",
+                    "phased"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "type": "array"
+              },
+              "run_ids": {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 2,
+                "minItems": 1,
+                "type": "array"
+              },
+              "time_scope": {
+                "oneOf": [
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "const": "final",
+                        "default": "final",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  {
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "const": "replay",
+                        "type": "string"
+                      },
+                      "requested_time_s": {
+                        "maximum": 3600,
+                        "minimum": 0,
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "requested_time_s"
+                    ],
+                    "type": "object"
+                  }
+                ]
+              },
+              "view": {
+                "const": "comparison",
+                "type": "string"
+              }
+            },
+            "required": [
+              "run_ids",
+              "view"
+            ],
+            "type": "object"
+          }
+        ]
+      }
+    },
+    "required": [
+      "payload"
+    ],
+    "type": "object"
+  },
+  "get_simulation_status": {
+    "additionalProperties": false,
+    "properties": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "type": "object"
+      }
+    },
+    "required": [
+      "payload"
+    ],
+    "type": "object"
+  },
+  "prepare_simulation": {
+    "additionalProperties": false,
+    "properties": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "departure_minutes": {
+            "default": 10,
+            "maximum": 30,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "radius_km": {
+            "anyOf": [
+              {
+                "maximum": 15,
+                "minimum": 2,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "traffic_mode": {
+            "default": "synthetic",
+            "enum": [
+              "synthetic",
+              "provider_speed_limits"
+            ],
+            "type": "string"
+          },
+          "vehicles": {
+            "default": 400,
+            "maximum": 1500,
+            "minimum": 20,
+            "type": "integer"
+          }
+        },
+        "required": [],
+        "type": "object"
+      }
+    },
+    "required": [
+      "payload"
+    ],
+    "type": "object"
+  },
+  "submit_simulation": {
+    "additionalProperties": false,
+    "properties": {
+      "payload": {
+        "additionalProperties": false,
+        "properties": {
+          "draft_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "draft_revision": {
+            "minimum": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "draft_id",
+          "draft_revision"
+        ],
+        "type": "object"
+      }
+    },
+    "required": [
+      "payload"
+    ],
+    "type": "object"
+  }
+}

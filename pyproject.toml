@@ -1,0 +1,26 @@
+# Repository-wide tool configuration only; components keep their own requirements files.
+
+[tool.pytest.ini_options]
+# Run every suite from the repository root: .venv/bin/python scripts/check_quality.py test
+# (bare pytest collects only these testpaths, not the Runtime, radio, firetruck, fire modeler, UI node or CDK suites).
+pythonpath = ["traffic-simulator", "fire-risk-modeler", "."]
+testpaths = [
+    "traffic-simulator/tests", "backend/tests", "backend/investigation/tests",
+    "backend/evacuation/tests", "backend/traffic_lab/tests", "deployment/tests",
+    "backend/gateway/tests", "backend/deployment/tests",
+]
+markers = ["integration: executes real SUMO binaries"]
+addopts = "-p no:cacheprovider"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 110
+target-version = "py314"
+extend-exclude = [".venv", "**/node_modules", "**/cdk.out"]
+
+# Bandit (bandit -c pyproject.toml -r .): pytest and unittest suites rely on assert statements and never
+# run under python -O, so B101 assert_used is skipped in test files only: every tests/ folder (including
+# backend/gateway/tests and backend/deployment/tests) and test_*.py files such as broadcastify/monitor's.
+# Asserts anywhere else are still reported.
+[tool.bandit.assert_used]
+skips = ["*/tests/*", "tests/*", "*/test_*.py", "test_*.py"]

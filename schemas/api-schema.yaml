@@ -1,0 +1,694 @@
+openapi: 3.0.0
+info:
+  title: Wildfire Management System API
+  version: 1.0.0
+  description: API schema for wildfire detection, response, and communication
+
+components:
+  schemas:
+    # Main Response Structure
+    UniversalResponse:
+      type: object
+      required: [type, content]
+      properties:
+        type:
+          type: string
+          enum: [structuredResponse]
+          description: Response type identifier
+        content:
+          $ref: "#/components/schemas/UniversalContent"
+
+    UniversalContent:
+      type: object
+      required: [response]
+      properties:
+        fireExposureError:
+          description: Safe terrain preparation handoff failure attached only by the authenticated API broker.
+          $ref: "#/components/schemas/FireExposure_FireRiskPreparationError"
+        fireExposureJobs:
+          type: array
+          default: []
+          description: Owned durable landscape preparation jobs attached only by the authenticated API broker.
+          items:
+            $ref: "#/components/schemas/FireExposure_FireRiskJobReference"
+        fireExposureData:
+          type: array
+          default: []
+          description: Source-bound fire exposure assessments attached by the authenticated API broker.
+          items:
+            $ref: "#/components/schemas/FireExposure_AssessmentResult"
+        simulationData:
+          $ref: "#/components/schemas/Evacuation_SimulationOutput"
+          nullable: true
+        location:
+          $ref: "#/components/schemas/Location"
+        response:
+          type: string
+          description: Text response from the agent
+        sourceAvailability:
+          type: object
+          nullable: true
+          description: Validated source outcomes for each requested detection topic, independent of prose
+          additionalProperties:
+            type: object
+            required: [status]
+            properties:
+              status:
+                type: string
+                enum: [available, unavailable]
+              code:
+                type: string
+                nullable: true
+        mapData:
+          $ref: "#/components/schemas/MapData"
+        audioData:
+          $ref: "#/components/schemas/AudioData"
+        forecastData:
+          $ref: "#/components/schemas/MultiDayForecast"
+          nullable: true
+          description: Multi-day weather forecast data grouped by date
+        knowledgeBaseCitations:
+          type: array
+          nullable: true
+          description: Citations from knowledge base sources
+          items:
+            $ref: "#/components/schemas/KnowledgeBaseCitation"
+        imageData:
+          $ref: "#/components/schemas/ImageData"
+          nullable: true
+          description: Generated report image with thumbnail for inline display
+
+    # Child Agent Output Schemas (for structured output)
+    DetectionOutput:
+      type: object
+      required: [query_type, response_text]
+      properties:
+        query_type:
+          type: string
+          enum: [current, forecast, combined]
+          description: Type of detection query performed
+        response_text:
+          type: string
+          description: Qualitative briefing for the requested observations; source measurements remain in mapData and forecastData
+        location:
+          $ref: "#/components/schemas/Location"
+        mapData:
+          $ref: "#/components/schemas/MapData"
+        forecastData:
+          $ref: "#/components/schemas/MultiDayForecast"
+          nullable: true
+
+    ResponseOutput:
+      type: object
+      required: [query_type, response_text]
+      properties:
+        query_type:
+          type: string
+          enum: [response]
+          description: Type of response query
+        response_text:
+          type: string
+          description: Generated response text
+        knowledgeBaseCitations:
+          type: array
+          nullable: true
+          description: Citations from knowledge base
+          items:
+            $ref: "#/components/schemas/KnowledgeBaseCitation"
+
+    CommunicationOutput:
+      type: object
+      required: [query_type, response_text]
+      properties:
+        query_type:
+          type: string
+          enum: [communication]
+          description: Type of communication query
+        location:
+          $ref: "#/components/schemas/Location"
+        response_text:
+          type: string
+          description: Summary response text
+        audioData:
+          $ref: "#/components/schemas/AudioData"
+          nullable: true
+
+    # Report Agent Output Schema (for structured output enforcement)
+    ReportOutput:
+      type: object
+      required: [query_type, htmlUrl, reportId]
+      description: Output schema for Report Agent - enforces structured output to prevent URL hallucination
+      properties:
+        query_type:
+          type: string
+          enum: [report]
+          description: Type of report query
+        htmlUrl:
+          type: string
+          format: uri
+          description: Presigned S3 URL for HTML report (24-hour expiration)
+        reportId:
+          type: string
+          description: Unique report identifier (e.g., RPT-20251226-093145)
+        title:
+          type: string
+          description: Report title
+        summary:
+          type: string
+          description: Brief text summary of the report content
+        s3Bucket:
+          type: string
+          description: S3 bucket name where report is stored
+        s3Key:
+          type: string
+          description: S3 key for the HTML report file
+        generatedAt:
+          type: string
+          format: date-time
+          description: When the report was generated
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the presigned URL expires
+
+    # Location Structure
+    Location:
+      type: object
+      properties:
+        latitude:
+          type: number
+          format: float
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          format: float
+          minimum: -180
+          maximum: 180
+        name:
+          type: string
+
+    # Map Data Structures
+    MapData:
+      type: object
+      properties:
+        summary:
+          $ref: "#/components/schemas/MapSummary"
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/FireLocation"
+
+    MapSummary:
+      type: object
+      properties:
+        location:
+          $ref: "#/components/schemas/Location"
+        name:
+          type: string
+        totalActiveFires:
+          type: integer
+          minimum: 0
+        processedLocationsWithWeather:
+          type: integer
+          minimum: 0
+        searchArea:
+          type: string
+        dataRecency:
+          type: string
+        analysisTimestamp:
+          type: string
+          format: date-time
+
+    FireLocation:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        latitude:
+          type: number
+          format: float
+        longitude:
+          type: number
+          format: float
+        fire:
+          $ref: "#/components/schemas/FireData"
+        currentWeather:
+          $ref: "#/components/schemas/WeatherData"
+
+    FireData:
+      type: object
+      properties:
+        sourceId:
+          type: string
+          nullable: true
+          description: Stable identifier of the observed Esri incident, including the identifier field.
+        name:
+          type: string
+          description: Name of the wildfire incident
+        acresBurned:
+          type: number
+          format: float
+          minimum: 0
+          nullable: true
+          description: Current acres burned (from DailyAcres or CalculatedAcres)
+        percentContained:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          nullable: true
+          description: Percentage of fire contained (0-100)
+        county:
+          type: string
+          nullable: true
+          description: Point of Origin County
+        state:
+          type: string
+          nullable: true
+          description: Point of Origin State (e.g., US-CA, US-WA)
+        location:
+          type: string
+          nullable: true
+          description: Location description constructed from county/state
+        startedDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: Fire discovery date and time
+        lastUpdated:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last modification date and time
+        isActive:
+          type: boolean
+          description: Whether fire is currently active (derived from IncidentTypeCategory)
+        distanceMiles:
+          type: number
+          format: float
+          description: Distance from search center in miles
+        priorityScore:
+          type: number
+          format: float
+          description: Calculated priority score (0-1)
+        rank:
+          type: integer
+          description: Priority ranking
+        fireCause:
+          type: string
+          nullable: true
+          description: Cause of the fire (Human, Natural, Lightning, Unknown, etc.)
+        personnel:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Total number of incident personnel assigned
+        residencesDestroyed:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Number of residences destroyed
+        structuresDestroyed:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Number of other structures destroyed
+        injuries:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Number of injuries
+        fatalities:
+          type: integer
+          nullable: true
+          minimum: 0
+          description: Number of fatalities
+        complexity:
+          type: string
+          nullable: true
+          description: Fire management complexity level (Type 1-5)
+
+    # Weather Data Structures (Cleaned - Critical Fields Only)
+    WeatherData:
+      type: object
+      properties:
+        queryLocation:
+          $ref: "#/components/schemas/Location"
+          description: Coordinate submitted to DTN for this observation; retained with source evidence.
+        timestamp:
+          type: string
+          format: date-time
+        temperature:
+          $ref: "#/components/schemas/WeatherValue"
+        dewpoint:
+          $ref: "#/components/schemas/WeatherValue"
+        heatIndex:
+          $ref: "#/components/schemas/WeatherValue"
+        relativeHumidity:
+          $ref: "#/components/schemas/WeatherValue"
+        wind:
+          $ref: "#/components/schemas/WindData"
+        precipitation:
+          $ref: "#/components/schemas/PrecipitationData"
+        weatherDescription:
+          type: string
+          description: Human-readable weather condition (e.g., 'Clear sky', 'Thunderstorm')
+        dtnSpecific:
+          type: object
+          properties:
+            hotDryWindyIndex:
+              $ref: "#/components/schemas/WeatherValue"
+
+    WeatherValue:
+      type: object
+      properties:
+        value:
+          type: number
+          format: float
+          nullable: true
+        unit:
+          type: string
+          nullable: true
+
+    WindData:
+      type: object
+      properties:
+        speed:
+          $ref: "#/components/schemas/WeatherValue"
+        direction:
+          $ref: "#/components/schemas/WeatherValue"
+        gust:
+          $ref: "#/components/schemas/WeatherValue"
+
+    PrecipitationData:
+      type: object
+      properties:
+        amount:
+          $ref: "#/components/schemas/WeatherValue"
+        probability:
+          $ref: "#/components/schemas/WeatherValue"
+
+    # Forecast Data Structures
+    ForecastData:
+      type: object
+      properties:
+        provider:
+          type: string
+        periods:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForecastPeriod"
+
+    ForecastPeriod:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        temperature:
+          $ref: "#/components/schemas/WeatherValue"
+        dewpoint:
+          $ref: "#/components/schemas/WeatherValue"
+        heatIndex:
+          $ref: "#/components/schemas/WeatherValue"
+        relativeHumidity:
+          $ref: "#/components/schemas/WeatherValue"
+        wind:
+          $ref: "#/components/schemas/WindData"
+        precipitation:
+          $ref: "#/components/schemas/PrecipitationData"
+        hotDryWindyIndex:
+          $ref: "#/components/schemas/WeatherValue"
+
+    # Multi-Day Forecast Structures
+    MultiDayForecast:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: "DTN"
+          description: Weather data provider
+        totalDays:
+          type: integer
+          minimum: 1
+          description: Total number of days in forecast
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForecastDay"
+          description: Forecast data grouped by day
+
+    ForecastDay:
+      type: object
+      properties:
+        date:
+          type: string
+          description: Date for this forecast day (YYYY-MM-DD format)
+        dayName:
+          type: string
+          description: Day of week name
+        periods:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForecastPeriod"
+          description: Forecast periods (typically 6-hour intervals)
+        summary:
+          $ref: "#/components/schemas/DailySummary"
+          description: Daily weather summary and extremes
+
+    DailySummary:
+      type: object
+      properties:
+        highTemp:
+          $ref: "#/components/schemas/WeatherValue"
+          description: Highest temperature for the day
+        lowTemp:
+          $ref: "#/components/schemas/WeatherValue"
+          description: Lowest temperature for the day
+        maxWindSpeed:
+          $ref: "#/components/schemas/WeatherValue"
+          description: Maximum wind speed for the day
+        avgHumidity:
+          type: number
+          description: Average relative humidity percentage
+        precipProb:
+          type: number
+          description: Maximum precipitation probability
+        maxHDWIndex:
+          type: number
+          description: Maximum Hot-Dry-Windy index (fire risk indicator)
+
+    # Audio Data Structures
+    AudioData:
+      type: object
+      nullable: true
+      properties:
+        success:
+          type: boolean
+          description: Overall success status of audio generation
+        messageId:
+          type: string
+          description: Unique identifier for the message
+        generatedAt:
+          type: string
+          format: date-time
+          description: ISO timestamp when audio was generated
+        expiresAt:
+          type: string
+          format: date-time
+          description: ISO timestamp when audio URLs expire
+        languages:
+          type: object
+          description: Audio data for each language
+          additionalProperties:
+            $ref: "#/components/schemas/AudioLanguage"
+        summary:
+          $ref: "#/components/schemas/AudioSummary"
+
+    AudioLanguage:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Success status for this language
+        languageName:
+          type: string
+          description: Human-readable language name
+        voice:
+          type: string
+          description: AWS Polly voice used for synthesis
+        translatedText:
+          type: string
+          description: Translated message text
+        audioUrl:
+          type: string
+          format: uri
+          description: Presigned S3 URL for audio file
+        s3Key:
+          type: string
+          description: S3 object key for audio file
+        expires:
+          type: integer
+          format: int64
+          description: Unix timestamp when URL expires
+        isExpired:
+          type: boolean
+          description: Whether the URL has expired
+
+    AudioSummary:
+      type: object
+      properties:
+        totalLanguages:
+          type: integer
+          description: Total number of languages requested
+          minimum: 0
+        successful:
+          type: integer
+          description: Number of successfully generated audio files
+          minimum: 0
+        failed:
+          type: integer
+          description: Number of failed audio generation attempts
+          minimum: 0
+
+    # Image Data Structures (Report Generation)
+    ImageData:
+      type: object
+      nullable: true
+      description: Generated HTML report data for display in UI
+      properties:
+        success:
+          type: boolean
+          description: Whether report generation succeeded
+        reportId:
+          type: string
+          description: Unique report identifier
+          example: "RPT-20251226-093145"
+        title:
+          type: string
+          description: Report title
+          example: "Fire Comparison Report"
+        summary:
+          type: string
+          description: Brief text summary of the report content
+        htmlUrl:
+          type: string
+          format: uri
+          description: Presigned S3 URL for HTML report (24-hour expiration)
+        s3Bucket:
+          type: string
+          description: S3 bucket name
+        s3Key:
+          type: string
+          description: S3 key for HTML report file
+          example: "reports/session_abc123/RPT-20251226-093145.html"
+        generatedAt:
+          type: string
+          format: date-time
+          description: When the report was generated
+        expiresAt:
+          type: string
+          format: date-time
+          description: When presigned URL expires
+        error:
+          type: string
+          nullable: true
+          description: Error message if generation failed
+
+    # Knowledge Base Citation Structures
+    KnowledgeBaseCitation:
+      type: object
+      properties:
+        documentName:
+          type: string
+          description: Reviewed source title (or filename for legacy private documents)
+        excerpt:
+          type: string
+          description: Verbatim retrieved excerpt, up to 500 characters
+        sourceUrl:
+          type: string
+          description: Official HTTPS publication URL from reviewed source metadata
+        publisher:
+          type: string
+          description: Publishing government agency
+        sourceDate:
+          type: string
+          description: Publication date or source's stated last update; absent if not stated
+        retrievedAt:
+          type: string
+          description: Date this source snapshot was retrieved and reviewed
+
+    # BEGIN GENERATED EVACUATION CONTRACTS
+    Evacuation_AgentActivity: {"additionalProperties": false, "properties": {"ended_at": {"anyOf": [{"type": "number"}, {"type": "null"}], "default": null, "title": "Ended At"}, "name": {"title": "Name", "type": "string"}, "started_at": {"title": "Started At", "type": "number"}, "status": {"enum": ["running", "awaiting_result", "result_received", "unverified", "error"], "title": "Status", "type": "string"}, "tool_call_id": {"title": "Tool Call Id", "type": "string"}}, "required": ["tool_call_id", "name", "status", "started_at"], "title": "AgentActivity", "type": "object"}
+    Evacuation_ArtifactReference: {"additionalProperties": false, "properties": {"artifact": {"const": "result", "default": "result", "title": "Artifact", "type": "string"}, "artifact_schema_version": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Artifact Schema Version"}, "hash_encoding": {"const": "canonical_json_v1", "default": "canonical_json_v1", "title": "Hash Encoding", "type": "string"}, "run_id": {"format": "uuid", "title": "Run Id", "type": "string"}, "sha256": {"pattern": "^[0-9a-f]{64}$", "title": "Sha256", "type": "string"}}, "required": ["run_id", "sha256", "artifact_schema_version"], "title": "ArtifactReference", "type": "object"}
+    Evacuation_AssumptionsRequest: {"additionalProperties": false, "properties": {"cursor": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Cursor"}, "run_ids": {"items": {"format": "uuid", "type": "string"}, "maxItems": 2, "minItems": 1, "title": "Run Ids", "type": "array"}, "view": {"const": "assumptions", "title": "View", "type": "string"}}, "required": ["run_ids", "view"], "title": "AssumptionsRequest", "type": "object"}
+    Evacuation_CancelRequest: {"additionalProperties": false, "properties": {"request_id": {"format": "uuid", "title": "Request Id", "type": "string"}}, "required": ["request_id"], "title": "CancelRequest", "type": "object"}
+    Evacuation_CapabilityOperation: {"additionalProperties": false, "properties": {"effect": {"enum": ["read", "create_run", "cancel"], "title": "Effect", "type": "string"}, "enabled": {"title": "Enabled", "type": "boolean"}, "id": {"title": "Id", "type": "string"}, "parameter": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Parameter"}, "parameter_schema": {"anyOf": [{"additionalProperties": {"$ref": "#/components/schemas/Evacuation_JsonValue"}, "type": "object"}, {"type": "null"}], "default": null, "title": "Parameter Schema"}, "reason_code": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Reason Code"}, "required_evidence": {"items": {"type": "string"}, "title": "Required Evidence", "type": "array"}, "required_job_states": {"items": {"type": "string"}, "title": "Required Job States", "type": "array"}, "suggested_question": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Suggested Question"}, "supported_time_scopes": {"items": {"enum": ["final", "replay"], "type": "string"}, "title": "Supported Time Scopes", "type": "array"}, "tool": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Tool"}}, "required": ["id", "enabled", "effect", "required_job_states"], "title": "CapabilityOperation", "type": "object"}
+    Evacuation_CapabilityRegistry: {"additionalProperties": false, "properties": {"api_version": {"const": "1", "default": "1", "title": "Api Version", "type": "string"}, "artifact_versions_readable": {"items": {"type": "integer"}, "title": "Artifact Versions Readable", "type": "array"}, "capability_version": {"const": "1.0.0", "default": "1.0.0", "title": "Capability Version", "type": "string"}, "cross_field_constraints": {"items": {"type": "string"}, "title": "Cross Field Constraints", "type": "array"}, "operations": {"items": {"$ref": "#/components/schemas/Evacuation_CapabilityOperation"}, "title": "Operations", "type": "array"}, "scenario_schema": {"additionalProperties": {"$ref": "#/components/schemas/Evacuation_JsonValue"}, "title": "Scenario Schema", "type": "object"}}, "required": ["artifact_versions_readable", "operations", "scenario_schema", "cross_field_constraints"], "title": "CapabilityRegistry", "type": "object"}
+    Evacuation_ComparisonRequest: {"additionalProperties": false, "properties": {"cursor": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Cursor"}, "policy_ids": {"items": {"enum": ["baseline", "coordinated", "phased"], "type": "string"}, "maxItems": 3, "minItems": 1, "title": "Policy Ids", "type": "array"}, "run_ids": {"items": {"format": "uuid", "type": "string"}, "maxItems": 2, "minItems": 1, "title": "Run Ids", "type": "array"}, "time_scope": {"discriminator": {"mapping": {"final": "#/components/schemas/Evacuation_FinalSelection", "replay": "#/components/schemas/Evacuation_ReplaySelection"}, "propertyName": "kind"}, "oneOf": [{"$ref": "#/components/schemas/Evacuation_FinalSelection"}, {"$ref": "#/components/schemas/Evacuation_ReplaySelection"}], "title": "Time Scope"}, "view": {"const": "comparison", "title": "View", "type": "string"}}, "required": ["run_ids", "view"], "title": "ComparisonRequest", "type": "object"}
+    Evacuation_CrewRequest: {"additionalProperties": false, "properties": {"crew_id": {"anyOf": [{"pattern": "^crew-[0-9]{1,3}$", "type": "string"}, {"type": "null"}], "default": null, "title": "Crew Id"}, "cursor": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Cursor"}, "policy_ids": {"items": {"enum": ["baseline", "coordinated", "phased"], "type": "string"}, "maxItems": 3, "minItems": 1, "title": "Policy Ids", "type": "array"}, "run_ids": {"items": {"format": "uuid", "type": "string"}, "maxItems": 2, "minItems": 1, "title": "Run Ids", "type": "array"}, "time_scope": {"$ref": "#/components/schemas/Evacuation_FinalSelection"}, "view": {"const": "crew", "title": "View", "type": "string"}}, "required": ["run_ids", "view"], "title": "CrewRequest", "type": "object"}
+    Evacuation_DraftResponse: {"additionalProperties": false, "properties": {"changes": {"additionalProperties": {"$ref": "#/components/schemas/Evacuation_JsonValue"}, "title": "Changes", "type": "object"}, "draft_id": {"format": "uuid", "title": "Draft Id", "type": "string"}, "draft_revision": {"title": "Draft Revision", "type": "integer"}, "error": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Error"}, "error_code": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Error Code"}, "incident_id": {"format": "uuid", "title": "Incident Id", "type": "string"}, "input_mode": {"enum": ["current", "frozen_parent"], "title": "Input Mode", "type": "string"}, "location_revision": {"title": "Location Revision", "type": "integer"}, "network_validation": {"anyOf": [{"$ref": "#/components/schemas/Evacuation_NetworkValidation"}, {"type": "null"}], "default": null}, "parent_run_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Parent Run Id"}, "phase": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Phase"}, "preparation_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Preparation Id"}, "road_coverage": {"anyOf": [{"$ref": "#/components/schemas/Evacuation_RoadCoverage"}, {"type": "null"}], "default": null}, "scenario": {"anyOf": [{"$ref": "#/components/schemas/Evacuation_SimulationScenario"}, {"$ref": "#/components/schemas/Evacuation_PreparationScenario"}], "title": "Scenario"}, "scenario_hash": {"title": "Scenario Hash", "type": "string"}, "session_id": {"format": "uuid", "title": "Session Id", "type": "string"}, "status": {"default": "ready", "enum": ["preparing", "ready", "unavailable", "failed"], "title": "Status", "type": "string"}}, "required": ["draft_id", "draft_revision", "session_id", "incident_id", "location_revision", "scenario", "scenario_hash", "input_mode"], "title": "DraftResponse", "type": "object"}
+    Evacuation_ErrorDetails: {"additionalProperties": false, "properties": {"code": {"title": "Code", "type": "string"}, "details": {"additionalProperties": {"$ref": "#/components/schemas/Evacuation_JsonValue"}, "title": "Details", "type": "object"}, "message": {"title": "Message", "type": "string"}, "request_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Request Id"}, "retryable": {"default": false, "title": "Retryable", "type": "boolean"}}, "required": ["code", "message"], "title": "ErrorDetails", "type": "object"}
+    Evacuation_ErrorResponse: {"additionalProperties": false, "properties": {"error": {"$ref": "#/components/schemas/Evacuation_ErrorDetails"}}, "required": ["error"], "title": "ErrorResponse", "type": "object"}
+    Evacuation_EvidenceComparison: {"additionalProperties": false, "properties": {"alternative_fact_id": {"title": "Alternative Fact Id", "type": "string"}, "availability": {"enum": ["available", "unavailable", "invalid", "not_reached"], "title": "Availability", "type": "string"}, "comparison_id": {"title": "Comparison Id", "type": "string"}, "comparison_kind": {"enum": ["policy", "controlled_variant", "changed_conditions", "incompatible"], "title": "Comparison Kind", "type": "string"}, "delta": {"anyOf": [{"type": "number"}, {"type": "null"}], "title": "Delta"}, "metric": {"title": "Metric", "type": "string"}, "notes": {"items": {"type": "string"}, "title": "Notes", "type": "array"}, "reason_code": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Reason Code"}, "reference_fact_id": {"title": "Reference Fact Id", "type": "string"}, "unit": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Unit"}}, "required": ["comparison_id", "reference_fact_id", "alternative_fact_id", "metric", "delta", "unit", "availability", "comparison_kind"], "title": "EvidenceComparison", "type": "object"}
+    Evacuation_EvidenceFact: {"additionalProperties": false, "properties": {"availability": {"enum": ["available", "unavailable", "invalid", "not_reached"], "title": "Availability", "type": "string"}, "crew_id": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Crew Id"}, "derivation": {"title": "Derivation", "type": "string"}, "fact_id": {"title": "Fact Id", "type": "string"}, "metric": {"title": "Metric", "type": "string"}, "notes": {"items": {"type": "string"}, "title": "Notes", "type": "array"}, "policy_id": {"anyOf": [{"enum": ["baseline", "coordinated", "phased"], "type": "string"}, {"type": "null"}], "default": null, "title": "Policy Id"}, "reason_code": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Reason Code"}, "run_id": {"format": "uuid", "title": "Run Id", "type": "string"}, "source_fields": {"items": {"type": "string"}, "title": "Source Fields", "type": "array"}, "time_scope": {"anyOf": [{"discriminator": {"mapping": {"final": "#/components/schemas/Evacuation_FinalTime", "replay": "#/components/schemas/Evacuation_ReplayTime"}, "propertyName": "kind"}, "oneOf": [{"$ref": "#/components/schemas/Evacuation_FinalTime"}, {"$ref": "#/components/schemas/Evacuation_ReplayTime"}]}, {"type": "null"}], "default": null, "title": "Time Scope"}, "unit": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Unit"}, "value": {"$ref": "#/components/schemas/Evacuation_JsonValue"}}, "required": ["fact_id", "run_id", "metric", "value", "availability", "derivation", "source_fields"], "title": "EvidenceFact", "type": "object"}
+    Evacuation_EvidencePage: {"additionalProperties": false, "properties": {"byte_limit": {"title": "Byte Limit", "type": "integer"}, "has_more": {"title": "Has More", "type": "boolean"}, "next_cursor": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Next Cursor"}, "offset": {"title": "Offset", "type": "integer"}, "returned_items": {"title": "Returned Items", "type": "integer"}, "total_items": {"title": "Total Items", "type": "integer"}}, "required": ["next_cursor", "has_more", "total_items", "returned_items", "offset", "byte_limit"], "title": "EvidencePage", "type": "object"}
+    Evacuation_EvidenceRequest: {"discriminator": {"mapping": {"assumptions": "#/components/schemas/Evacuation_AssumptionsRequest", "comparison": "#/components/schemas/Evacuation_ComparisonRequest", "crew": "#/components/schemas/Evacuation_CrewRequest", "outcomes": "#/components/schemas/Evacuation_OutcomesRequest", "replay": "#/components/schemas/Evacuation_ReplayRequest", "sources": "#/components/schemas/Evacuation_SourcesRequest"}, "propertyName": "view"}, "oneOf": [{"$ref": "#/components/schemas/Evacuation_OutcomesRequest"}, {"$ref": "#/components/schemas/Evacuation_CrewRequest"}, {"$ref": "#/components/schemas/Evacuation_SourcesRequest"}, {"$ref": "#/components/schemas/Evacuation_AssumptionsRequest"}, {"$ref": "#/components/schemas/Evacuation_ReplayRequest"}, {"$ref": "#/components/schemas/Evacuation_ComparisonRequest"}]}
+    Evacuation_EvidenceResponse: {"additionalProperties": false, "properties": {"api_version": {"const": "1", "default": "1", "title": "Api Version", "type": "string"}, "artifact_refs": {"items": {"$ref": "#/components/schemas/Evacuation_ArtifactReference"}, "title": "Artifact Refs", "type": "array"}, "availability": {"enum": ["available", "unavailable", "invalid", "not_reached"], "title": "Availability", "type": "string"}, "capability_version": {"const": "1.0.0", "default": "1.0.0", "title": "Capability Version", "type": "string"}, "comparisons": {"items": {"$ref": "#/components/schemas/Evacuation_EvidenceComparison"}, "title": "Comparisons", "type": "array"}, "evidence_id": {"format": "uuid", "title": "Evidence Id", "type": "string"}, "facts": {"items": {"$ref": "#/components/schemas/Evacuation_EvidenceFact"}, "title": "Facts", "type": "array"}, "missing_reasons": {"items": {"type": "string"}, "title": "Missing Reasons", "type": "array"}, "notes": {"items": {"type": "string"}, "title": "Notes", "type": "array"}, "pagination": {"$ref": "#/components/schemas/Evacuation_EvidencePage"}, "view": {"enum": ["outcomes", "crew", "sources", "assumptions", "replay", "comparison"], "title": "View", "type": "string"}}, "required": ["evidence_id", "view", "artifact_refs", "availability", "facts", "comparisons", "missing_reasons", "pagination"], "title": "EvidenceResponse", "type": "object"}
+    Evacuation_FinalSelection: {"additionalProperties": false, "properties": {"kind": {"const": "final", "default": "final", "title": "Kind", "type": "string"}}, "title": "FinalSelection", "type": "object"}
+    Evacuation_FinalTime: {"additionalProperties": false, "properties": {"effective_time_s": {"anyOf": [{"maximum": 3600, "minimum": 0, "type": "number"}, {"type": "null"}], "title": "Effective Time S"}, "kind": {"const": "final", "default": "final", "title": "Kind", "type": "string"}}, "required": ["effective_time_s"], "title": "FinalTime", "type": "object"}
+    Evacuation_IncidentCoordinates: {"additionalProperties": false, "properties": {"label": {"anyOf": [{"maxLength": 300, "minLength": 1, "type": "string"}, {"type": "null"}], "default": null, "title": "Label"}, "lat": {"maximum": 90, "minimum": -90, "title": "Lat", "type": "number"}, "lon": {"maximum": 180, "minimum": -180, "title": "Lon", "type": "number"}}, "required": ["lat", "lon"], "title": "IncidentCoordinates", "type": "object"}
+    Evacuation_IncidentInvestigationRequest: {"additionalProperties": false, "description": "Start or explicitly retry one saved investigation at an owned location.", "properties": {"retry": {"default": false, "title": "Retry", "type": "boolean"}, "run_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Run Id"}}, "title": "IncidentInvestigationRequest", "type": "object"}
+    Evacuation_IncidentInvestigationResponse: {"additionalProperties": false, "properties": {"activity": {"items": {"$ref": "#/components/schemas/Evacuation_AgentActivity"}, "title": "Activity", "type": "array"}, "completed_at": {"anyOf": [{"type": "number"}, {"type": "null"}], "default": null, "title": "Completed At"}, "created_at": {"title": "Created At", "type": "number"}, "error": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Error"}, "fire_observations": {"items": {"$ref": "#/components/schemas/Evacuation_ReportedFireObservation"}, "title": "Fire Observations", "type": "array"}, "incident_id": {"title": "Incident Id", "type": "string"}, "input_bundle_id": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Input Bundle Id"}, "input_bundle_sha256": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Input Bundle Sha256"}, "location_revision": {"title": "Location Revision", "type": "integer"}, "run_id": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Run Id"}, "snapshot": {"anyOf": [{"additionalProperties": {"$ref": "#/components/schemas/Evacuation_JsonValue"}, "type": "object"}, {"type": "null"}], "default": null, "title": "Snapshot"}, "stage": {"enum": ["initial", "simulation"], "title": "Stage", "type": "string"}, "status": {"enum": ["running", "completed", "failed", "interrupted", "cancelled"], "title": "Status", "type": "string"}, "task_id": {"title": "Task Id", "type": "string"}}, "required": ["task_id", "incident_id", "location_revision", "run_id", "stage", "status", "created_at", "activity"], "title": "IncidentInvestigationResponse", "type": "object"}
+    Evacuation_IncidentRequest: {"additionalProperties": false, "properties": {"coordinates": {"anyOf": [{"$ref": "#/components/schemas/Evacuation_IncidentCoordinates"}, {"type": "null"}], "default": null}, "fire_assessment_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Fire Assessment Id"}, "fire_observation_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Fire Observation Id"}, "preset_id": {"anyOf": [{"enum": ["paradise-2018", "palisades-2025"], "type": "string"}, {"type": "null"}], "default": null, "title": "Preset Id"}, "reported_address": {"anyOf": [{"maxLength": 500, "minLength": 5, "type": "string"}, {"type": "null"}], "default": null, "title": "Reported Address"}, "reported_place": {"anyOf": [{"maxLength": 500, "minLength": 3, "type": "string"}, {"type": "null"}], "default": null, "title": "Reported Place"}, "request_id": {"format": "uuid", "title": "Request Id", "type": "string"}, "session_id": {"format": "uuid", "title": "Session Id", "type": "string"}}, "required": ["request_id", "session_id"], "title": "IncidentRequest", "type": "object"}
+    Evacuation_IncidentResponse: {"additionalProperties": false, "properties": {"incident_id": {"format": "uuid", "title": "Incident Id", "type": "string"}, "location": {"$ref": "#/components/schemas/Evacuation_LocationReceipt"}, "location_revision": {"title": "Location Revision", "type": "integer"}, "preset_id": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Preset Id"}, "session_id": {"format": "uuid", "title": "Session Id", "type": "string"}}, "required": ["incident_id", "session_id", "location_revision", "preset_id", "location"], "title": "IncidentResponse", "type": "object"}
+    Evacuation_InvestigationRequest: {"additionalProperties": false, "properties": {"context_envelope": {"anyOf": [{"additionalProperties": true, "type": "object"}, {"type": "null"}], "default": null, "title": "Context Envelope"}, "question": {"maxLength": 4000, "minLength": 1, "title": "Question", "type": "string"}, "request_id": {"format": "uuid", "title": "Request Id", "type": "string"}, "thread_id": {"maxLength": 200, "minLength": 1, "title": "Thread Id", "type": "string"}}, "required": ["thread_id", "question"], "title": "InvestigationRequest", "type": "object"}
+    Evacuation_JsonValue: {}
+    Evacuation_LocationReceipt: {"additionalProperties": false, "properties": {"address_type": {"title": "Address Type", "type": "string"}, "coordinate_system": {"const": "WGS84", "default": "WGS84", "title": "Coordinate System", "type": "string"}, "lat": {"maximum": 90, "minimum": -90, "title": "Lat", "type": "number"}, "lon": {"maximum": 180, "minimum": -180, "title": "Lon", "type": "number"}, "matched_address": {"title": "Matched Address", "type": "string"}, "meaning": {"default": "Scenario location; not confirmation of an active fire or exact historical ignition.", "title": "Meaning", "type": "string"}, "origin": {"default": "geocoded_address", "enum": ["geocoded_address", "geocoded_place", "user_coordinates", "reported_fire"], "title": "Origin", "type": "string"}, "provider": {"default": "Esri", "enum": ["Esri", "Amazon Location", "User input"], "title": "Provider", "type": "string"}, "reported_address": {"title": "Reported Address", "type": "string"}, "resolved_at": {"title": "Resolved At", "type": "string"}, "resolver_version": {"default": "esri-v1", "enum": ["esri-v1", "amazon-location-v1", "coordinates-v1", "fire-observation-v1"], "title": "Resolver Version", "type": "string"}, "score": {"anyOf": [{"maximum": 100, "minimum": 0, "type": "number"}, {"type": "null"}], "default": null, "title": "Score"}, "score_meaning": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Score Meaning"}, "source_assessment_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Source Assessment Id"}, "source_id": {"title": "Source Id", "type": "string"}, "source_observation_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Source Observation Id"}, "source_timestamp": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Source Timestamp"}, "status": {"const": "resolved", "title": "Status", "type": "string"}}, "required": ["status", "reported_address", "matched_address", "lat", "lon", "address_type", "resolved_at", "source_id"], "title": "LocationReceipt", "type": "object"}
+    Evacuation_NetworkValidation: {"additionalProperties": false, "properties": {"adjusted": {"title": "Adjusted", "type": "boolean"}, "attempts": {"items": {"additionalProperties": {"$ref": "#/components/schemas/Evacuation_JsonValue"}, "type": "object"}, "title": "Attempts", "type": "array"}, "checked_at": {"title": "Checked At", "type": "string"}, "corridor_label": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Corridor Label"}, "coverage": {"anyOf": [{"$ref": "#/components/schemas/Evacuation_RoadCoverage"}, {"type": "null"}], "default": null}, "crew_staging_distance_km": {"anyOf": [{"minimum": 0, "type": "number"}, {"type": "null"}], "default": null, "title": "Crew Staging Distance Km"}, "edge_count": {"maximum": 14000, "minimum": 10, "title": "Edge Count", "type": "integer"}, "effective_radius_km": {"title": "Effective Radius Km", "type": "number"}, "extent_mode": {"default": "fixed", "enum": ["auto", "fixed"], "title": "Extent Mode", "type": "string"}, "gate_count": {"maximum": 3, "minimum": 1, "title": "Gate Count", "type": "integer"}, "gates": {"items": {"additionalProperties": {"$ref": "#/components/schemas/Evacuation_JsonValue"}, "type": "object"}, "title": "Gates", "type": "array"}, "highway_edge_count": {"minimum": 1, "title": "Highway Edge Count", "type": "integer"}, "network_sha256": {"pattern": "^[0-9a-f]{64}$", "title": "Network Sha256", "type": "string"}, "requested_radius_km": {"title": "Requested Radius Km", "type": "number"}, "study_bounds": {"items": {"items": {"type": "number"}, "maxItems": 4, "minItems": 4, "type": "array"}, "maxItems": 2, "title": "Study Bounds", "type": "array"}}, "required": ["requested_radius_km", "effective_radius_km", "edge_count", "highway_edge_count", "gate_count", "network_sha256", "checked_at", "adjusted", "attempts"], "title": "NetworkValidation", "type": "object"}
+    Evacuation_OutcomesRequest: {"additionalProperties": false, "properties": {"cursor": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Cursor"}, "policy_ids": {"items": {"enum": ["baseline", "coordinated", "phased"], "type": "string"}, "maxItems": 3, "minItems": 1, "title": "Policy Ids", "type": "array"}, "run_ids": {"items": {"format": "uuid", "type": "string"}, "maxItems": 2, "minItems": 1, "title": "Run Ids", "type": "array"}, "time_scope": {"$ref": "#/components/schemas/Evacuation_FinalSelection"}, "view": {"const": "outcomes", "title": "View", "type": "string"}}, "required": ["run_ids", "view"], "title": "OutcomesRequest", "type": "object"}
+    Evacuation_PreparationScenario: {"additionalProperties": false, "description": "An explicit point awaiting the worker's corridor and exit selection.", "properties": {"background_speed_factor": {"default": 1.0, "maximum": 1.0, "minimum": 0.3, "title": "Background Speed Factor", "type": "number"}, "crews": {"default": 4, "maximum": 16, "minimum": 0, "title": "Crews", "type": "integer"}, "departure_minutes": {"default": 10, "maximum": 45, "minimum": 1, "title": "Departure Minutes", "type": "integer"}, "duration_minutes": {"default": 30, "maximum": 60, "minimum": 5, "title": "Duration Minutes", "type": "integer"}, "exit_direction": {"const": "auto", "default": "auto", "title": "Exit Direction", "type": "string"}, "hazard_growth_m_min": {"default": 10, "maximum": 100, "minimum": 0, "title": "Hazard Growth M Min", "type": "number"}, "hazard_radius_m": {"default": 150, "maximum": 3000, "minimum": 0, "title": "Hazard Radius M", "type": "number"}, "hazard_start_minutes": {"default": 5, "maximum": 45, "minimum": 0, "title": "Hazard Start Minutes", "type": "integer"}, "highway": {"const": "auto", "default": "auto", "title": "Highway", "type": "string"}, "lat": {"maximum": 90, "minimum": -90, "title": "Lat", "type": "number"}, "lon": {"maximum": 180, "minimum": -180, "title": "Lon", "type": "number"}, "people_per_vehicle": {"default": 2, "maximum": 8, "minimum": 1, "title": "People Per Vehicle", "type": "integer"}, "policies": {"items": {"enum": ["baseline", "coordinated", "phased"], "type": "string"}, "maxItems": 3, "minItems": 1, "title": "Policies", "type": "array"}, "radius_km": {"maximum": 15, "minimum": 2, "title": "Radius Km", "type": "number"}, "seed": {"default": 42, "maximum": 2147483647, "minimum": 0, "title": "Seed", "type": "integer"}, "traffic_mode": {"default": "synthetic", "enum": ["synthetic", "provider_speed_limits"], "title": "Traffic Mode", "type": "string"}, "vehicles": {"default": 400, "maximum": 1500, "minimum": 20, "title": "Vehicles", "type": "integer"}}, "required": ["lat", "lon", "radius_km"], "title": "PreparationScenario", "type": "object"}
+    Evacuation_PrepareRequest: {"additionalProperties": false, "properties": {"departure_minutes": {"default": 10, "maximum": 30, "minimum": 1, "title": "Departure Minutes", "type": "integer"}, "incident_id": {"format": "uuid", "title": "Incident Id", "type": "string"}, "location_revision": {"minimum": 1, "title": "Location Revision", "type": "integer"}, "radius_km": {"anyOf": [{"maximum": 15, "minimum": 2, "type": "number"}, {"type": "null"}], "default": null, "title": "Radius Km"}, "request_id": {"format": "uuid", "title": "Request Id", "type": "string"}, "session_id": {"format": "uuid", "title": "Session Id", "type": "string"}, "traffic_mode": {"default": "synthetic", "enum": ["synthetic", "provider_speed_limits"], "title": "Traffic Mode", "type": "string"}, "vehicles": {"default": 400, "maximum": 1500, "minimum": 20, "title": "Vehicles", "type": "integer"}}, "required": ["request_id", "session_id", "incident_id", "location_revision"], "title": "PrepareRequest", "type": "object"}
+    Evacuation_ReplayRequest: {"additionalProperties": false, "properties": {"cursor": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Cursor"}, "policy_ids": {"items": {"enum": ["baseline", "coordinated", "phased"], "type": "string"}, "maxItems": 3, "minItems": 1, "title": "Policy Ids", "type": "array"}, "run_ids": {"items": {"format": "uuid", "type": "string"}, "maxItems": 2, "minItems": 1, "title": "Run Ids", "type": "array"}, "time_scope": {"$ref": "#/components/schemas/Evacuation_ReplaySelection"}, "view": {"const": "replay", "title": "View", "type": "string"}}, "required": ["run_ids", "view", "time_scope"], "title": "ReplayRequest", "type": "object"}
+    Evacuation_ReplaySelection: {"additionalProperties": false, "properties": {"kind": {"const": "replay", "title": "Kind", "type": "string"}, "requested_time_s": {"maximum": 3600, "minimum": 0, "title": "Requested Time S", "type": "number"}}, "required": ["kind", "requested_time_s"], "title": "ReplaySelection", "type": "object"}
+    Evacuation_ReplayTime: {"additionalProperties": false, "properties": {"effective_time_s": {"anyOf": [{"maximum": 3600, "minimum": 0, "type": "number"}, {"type": "null"}], "title": "Effective Time S"}, "kind": {"const": "replay", "default": "replay", "title": "Kind", "type": "string"}, "requested_time_s": {"maximum": 3600, "minimum": 0, "title": "Requested Time S", "type": "number"}}, "required": ["requested_time_s", "effective_time_s"], "title": "ReplayTime", "type": "object"}
+    Evacuation_ReportedFireObservation: {"additionalProperties": false, "description": "An owned immutable source point; independent of guidance and spread-model availability.", "properties": {"latitude": {"maximum": 90, "minimum": -90, "title": "Latitude", "type": "number"}, "longitude": {"maximum": 180, "minimum": -180, "title": "Longitude", "type": "number"}, "name": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Name"}, "observation_id": {"format": "uuid", "title": "Observation Id", "type": "string"}, "source_id": {"maxLength": 300, "minLength": 1, "title": "Source Id", "type": "string"}, "source_timestamp": {"anyOf": [{"maxLength": 60, "type": "string"}, {"type": "null"}], "default": null, "title": "Source Timestamp"}}, "required": ["observation_id", "source_id", "latitude", "longitude"], "title": "ReportedFireObservation", "type": "object"}
+    Evacuation_RoadCoverage: {"description": "Completed road-coverage evidence, separate from provider or native-operation failures.", "properties": {"attempts": {"items": {"additionalProperties": {"$ref": "#/components/schemas/Evacuation_JsonValue"}, "type": "object"}, "title": "Attempts", "type": "array"}, "extent_mode": {"enum": ["auto", "fixed"], "title": "Extent Mode", "type": "string"}, "message": {"maxLength": 500, "minLength": 1, "title": "Message", "type": "string"}, "reason_code": {"maxLength": 100, "minLength": 1, "title": "Reason Code", "type": "string"}, "requested_radius_km": {"anyOf": [{"maximum": 15, "minimum": 2, "type": "number"}, {"type": "null"}], "default": null, "title": "Requested Radius Km"}, "searched_radius_km": {"maximum": 15, "minimum": 2, "title": "Searched Radius Km", "type": "number"}, "source_snapshot": {"anyOf": [{"additionalProperties": {"$ref": "#/components/schemas/Evacuation_JsonValue"}, "type": "object"}, {"type": "null"}], "default": null, "title": "Source Snapshot"}, "study_bounds": {"items": {"items": {"type": "number"}, "maxItems": 4, "minItems": 4, "type": "array"}, "maxItems": 2, "title": "Study Bounds", "type": "array"}}, "required": ["reason_code", "message", "extent_mode", "searched_radius_km"], "title": "RoadCoverage", "type": "object"}
+    Evacuation_RunResponse: {"additionalProperties": false, "properties": {"created_at": {"title": "Created At", "type": "string"}, "draft_id": {"format": "uuid", "title": "Draft Id", "type": "string"}, "error": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Error"}, "error_code": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Error Code"}, "incident_id": {"format": "uuid", "title": "Incident Id", "type": "string"}, "location_revision": {"title": "Location Revision", "type": "integer"}, "parent_run_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Parent Run Id"}, "phase": {"title": "Phase", "type": "string"}, "progress": {"title": "Progress", "type": "number"}, "run_id": {"format": "uuid", "title": "Run Id", "type": "string"}, "scenario": {"$ref": "#/components/schemas/Evacuation_SimulationScenario"}, "session_id": {"format": "uuid", "title": "Session Id", "type": "string"}, "status": {"enum": ["queued", "running", "cancelling", "cancelled", "completed", "failed"], "title": "Status", "type": "string"}}, "required": ["run_id", "session_id", "incident_id", "location_revision", "status", "progress", "phase", "scenario", "created_at", "draft_id"], "title": "RunResponse", "type": "object"}
+    Evacuation_SessionPatch: {"additionalProperties": false, "properties": {"expected_revision": {"minimum": 1, "title": "Expected Revision", "type": "integer"}, "policy_id": {"default": "baseline", "enum": ["baseline", "coordinated", "phased"], "title": "Policy Id", "type": "string"}, "replay_time_s": {"default": 0.0, "maximum": 3600, "minimum": 0, "title": "Replay Time S", "type": "number"}, "request_id": {"format": "uuid", "title": "Request Id", "type": "string"}, "selected_run_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Selected Run Id"}}, "required": ["request_id", "expected_revision"], "title": "SessionPatch", "type": "object"}
+    Evacuation_SessionRequest: {"additionalProperties": false, "properties": {"entry_mode": {"enum": ["radio", "lab"], "title": "Entry Mode", "type": "string"}, "request_id": {"format": "uuid", "title": "Request Id", "type": "string"}}, "required": ["request_id", "entry_mode"], "title": "SessionRequest", "type": "object"}
+    Evacuation_SessionResponse: {"additionalProperties": false, "properties": {"entry_mode": {"enum": ["radio", "lab"], "title": "Entry Mode", "type": "string"}, "incident_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Incident Id"}, "latest_draft_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Latest Draft Id"}, "policy_id": {"default": "baseline", "enum": ["baseline", "coordinated", "phased"], "title": "Policy Id", "type": "string"}, "replay_time_s": {"default": 0.0, "maximum": 3600, "minimum": 0, "title": "Replay Time S", "type": "number"}, "revision": {"title": "Revision", "type": "integer"}, "selected_run_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Selected Run Id"}, "session_id": {"format": "uuid", "title": "Session Id", "type": "string"}}, "required": ["session_id", "revision", "entry_mode"], "title": "SessionResponse", "type": "object"}
+    Evacuation_SimulationOutput: {"additionalProperties": false, "properties": {"answer": {"title": "Answer", "type": "string"}, "capability_version": {"default": "1.0.0", "title": "Capability Version", "type": "string"}, "draft": {"anyOf": [{"$ref": "#/components/schemas/Evacuation_DraftResponse"}, {"type": "null"}], "default": null}, "evidence": {"items": {"$ref": "#/components/schemas/Evacuation_EvidenceResponse"}, "title": "Evidence", "type": "array"}, "incident_id": {"format": "uuid", "title": "Incident Id", "type": "string"}, "location_revision": {"title": "Location Revision", "type": "integer"}, "question": {"title": "Question", "type": "string"}, "run": {"anyOf": [{"$ref": "#/components/schemas/Evacuation_RunResponse"}, {"type": "null"}], "default": null}, "schema_version": {"const": 1, "default": 1, "title": "Schema Version", "type": "integer"}, "session_id": {"format": "uuid", "title": "Session Id", "type": "string"}, "status": {"enum": ["submitted", "answer", "needs_input", "unsupported", "error"], "title": "Status", "type": "string"}, "turn_id": {"format": "uuid", "title": "Turn Id", "type": "string"}, "ui_actions": {"items": {"$ref": "#/components/schemas/Evacuation_UiAction"}, "title": "Ui Actions", "type": "array"}, "warnings": {"items": {"type": "string"}, "title": "Warnings", "type": "array"}}, "required": ["session_id", "incident_id", "location_revision", "turn_id", "status", "question", "answer"], "title": "SimulationOutput", "type": "object"}
+    Evacuation_SimulationScenario: {"additionalProperties": false, "description": "The integration boundary requires explicit geographic/profile choices.", "properties": {"background_speed_factor": {"default": 1.0, "maximum": 1.0, "minimum": 0.3, "title": "Background Speed Factor", "type": "number"}, "crews": {"default": 4, "maximum": 16, "minimum": 0, "title": "Crews", "type": "integer"}, "departure_minutes": {"default": 10, "maximum": 45, "minimum": 1, "title": "Departure Minutes", "type": "integer"}, "duration_minutes": {"default": 30, "maximum": 60, "minimum": 5, "title": "Duration Minutes", "type": "integer"}, "exit_direction": {"enum": ["south", "north", "east", "west"], "title": "Exit Direction", "type": "string"}, "hazard_growth_m_min": {"default": 10, "maximum": 100, "minimum": 0, "title": "Hazard Growth M Min", "type": "number"}, "hazard_radius_m": {"default": 150, "maximum": 3000, "minimum": 0, "title": "Hazard Radius M", "type": "number"}, "hazard_start_minutes": {"default": 5, "maximum": 45, "minimum": 0, "title": "Hazard Start Minutes", "type": "integer"}, "highway": {"pattern": "^(?:(?:State|US|Interstate) [0-9]{1,3}|osm:(?:ref|name):[0-9a-f]{20}|osm:way:[0-9]+)$", "title": "Highway", "type": "string"}, "lat": {"maximum": 90, "minimum": -90, "title": "Lat", "type": "number"}, "lon": {"maximum": 180, "minimum": -180, "title": "Lon", "type": "number"}, "people_per_vehicle": {"default": 2, "maximum": 8, "minimum": 1, "title": "People Per Vehicle", "type": "integer"}, "policies": {"items": {"enum": ["baseline", "coordinated", "phased"], "type": "string"}, "maxItems": 3, "minItems": 1, "title": "Policies", "type": "array"}, "radius_km": {"maximum": 15, "minimum": 2, "title": "Radius Km", "type": "number"}, "seed": {"default": 42, "maximum": 2147483647, "minimum": 0, "title": "Seed", "type": "integer"}, "traffic_mode": {"default": "synthetic", "enum": ["synthetic", "provider_speed_limits"], "title": "Traffic Mode", "type": "string"}, "vehicles": {"default": 400, "maximum": 1500, "minimum": 20, "title": "Vehicles", "type": "integer"}}, "required": ["lat", "lon", "radius_km", "highway", "exit_direction"], "title": "SimulationScenario", "type": "object"}
+    Evacuation_SourcesRequest: {"additionalProperties": false, "properties": {"cursor": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Cursor"}, "run_ids": {"items": {"format": "uuid", "type": "string"}, "maxItems": 2, "minItems": 1, "title": "Run Ids", "type": "array"}, "view": {"const": "sources", "title": "View", "type": "string"}}, "required": ["run_ids", "view"], "title": "SourcesRequest", "type": "object"}
+    Evacuation_StatusRequest: {"additionalProperties": false, "properties": {"run_id": {"format": "uuid", "title": "Run Id", "type": "string"}}, "required": ["run_id"], "title": "StatusRequest", "type": "object"}
+    Evacuation_SubmitRequest: {"additionalProperties": false, "properties": {"capability_version": {"title": "Capability Version", "type": "string"}, "draft_id": {"format": "uuid", "title": "Draft Id", "type": "string"}, "draft_revision": {"minimum": 1, "title": "Draft Revision", "type": "integer"}, "request_id": {"format": "uuid", "title": "Request Id", "type": "string"}}, "required": ["draft_id", "draft_revision", "request_id", "capability_version"], "title": "SubmitRequest", "type": "object"}
+    Evacuation_TurnRequest: {"additionalProperties": false, "properties": {"draft_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Draft Id"}, "incident_id": {"format": "uuid", "title": "Incident Id", "type": "string"}, "intent": {"default": "question", "enum": ["question", "prepare", "submit", "analyze"], "title": "Intent", "type": "string"}, "location_revision": {"minimum": 1, "title": "Location Revision", "type": "integer"}, "policy_id": {"default": "baseline", "enum": ["baseline", "coordinated", "phased"], "title": "Policy Id", "type": "string"}, "question": {"maxLength": 4000, "minLength": 1, "title": "Question", "type": "string"}, "replay_time_s": {"default": 0.0, "maximum": 3600, "minimum": 0, "title": "Replay Time S", "type": "number"}, "request_id": {"format": "uuid", "title": "Request Id", "type": "string"}, "run_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Run Id"}, "session_id": {"format": "uuid", "title": "Session Id", "type": "string"}}, "required": ["request_id", "session_id", "incident_id", "location_revision", "question"], "title": "TurnRequest", "type": "object"}
+    Evacuation_UiAction: {"additionalProperties": false, "properties": {"crew_id": {"anyOf": [{"type": "string"}, {"type": "null"}], "default": null, "title": "Crew Id"}, "draft_id": {"anyOf": [{"format": "uuid", "type": "string"}, {"type": "null"}], "default": null, "title": "Draft Id"}, "panel": {"anyOf": [{"enum": ["overview", "bottlenecks", "crews", "evidence"], "type": "string"}, {"type": "null"}], "default": null, "title": "Panel"}, "policy_id": {"anyOf": [{"enum": ["baseline", "coordinated", "phased"], "type": "string"}, {"type": "null"}], "default": null, "title": "Policy Id"}, "time_s": {"anyOf": [{"maximum": 3600, "minimum": 0, "type": "number"}, {"type": "null"}], "default": null, "title": "Time S"}, "type": {"enum": ["select_policy", "seek_time", "focus_crew", "open_panel", "open_comparison", "inspect_source", "show_variant_draft"], "title": "Type", "type": "string"}}, "required": ["type"], "title": "UiAction", "type": "object"}
+    Evacuation_VariantChanges: {"additionalProperties": false, "properties": {"departure_minutes": {"anyOf": [{"maximum": 45, "minimum": 1, "type": "integer"}, {"type": "null"}], "default": null, "title": "Departure Minutes"}, "vehicles": {"anyOf": [{"maximum": 1500, "minimum": 20, "type": "integer"}, {"type": "null"}], "default": null, "title": "Vehicles"}}, "title": "VariantChanges", "type": "object"}
+    Evacuation_VariantRequest: {"additionalProperties": false, "properties": {"capability_version": {"title": "Capability Version", "type": "string"}, "changes": {"$ref": "#/components/schemas/Evacuation_VariantChanges"}, "input_mode": {"const": "frozen_parent", "default": "frozen_parent", "title": "Input Mode", "type": "string"}, "parent_run_id": {"format": "uuid", "title": "Parent Run Id", "type": "string"}, "request_id": {"format": "uuid", "title": "Request Id", "type": "string"}}, "required": ["parent_run_id", "changes", "request_id", "capability_version"], "title": "VariantRequest", "type": "object"}
+    # END GENERATED EVACUATION CONTRACTS
+
+    # BEGIN GENERATED FIRE EXPOSURE CONTRACTS
+    FireExposure_AssessmentFailure: {"additionalProperties": false, "properties": {"code": {"enum": ["DTN_WIND_UNUSABLE", "LANDSCAPE_INPUT_INVALID", "LANDSCAPE_COVERAGE_MISSING", "LANDSCAPE_REQUEST_FAILED", "LANDSCAPE_NODATA", "IGNITION_DATA_CONFLICT", "FUEL_CODE_UNSUPPORTED", "DOMAIN_TRUNCATED", "CALCULATION_FAILED", "CALCULATION_LIMIT"], "title": "Code", "type": "string"}, "message": {"maxLength": 300, "minLength": 1, "title": "Message", "type": "string"}}, "required": ["code", "message"], "title": "AssessmentFailure", "type": "object"}
+    FireExposure_AssessmentResult: {"additionalProperties": false, "properties": {"assessment_id": {"maxLength": 36, "minLength": 36, "title": "Assessment Id", "type": "string"}, "assumptions": {"items": {"type": "string"}, "maxItems": 20, "title": "Assumptions", "type": "array"}, "availability": {"enum": ["available", "unavailable"], "title": "Availability", "type": "string"}, "calculated_at": {"maxLength": 60, "title": "Calculated At", "type": "string"}, "failure": {"anyOf": [{"$ref": "#/components/schemas/FireExposure_AssessmentFailure"}, {"type": "null"}], "default": null}, "fire": {"$ref": "#/components/schemas/FireExposure_FireObservation"}, "fire_ref": {"maxLength": 512, "minLength": 1, "title": "Fire Ref", "type": "string"}, "geojson": {"$ref": "#/components/schemas/FireExposure_FeatureCollection"}, "input_hash": {"pattern": "^[a-f0-9]{64}$", "title": "Input Hash", "type": "string"}, "landscape": {"anyOf": [{"$ref": "#/components/schemas/FireExposure_LandscapeSummary"}, {"type": "null"}], "default": null}, "mode": {"enum": ["proximity", "wind_informed", "surface_fire", "landscape"], "title": "Mode", "type": "string"}, "model_version": {"maxLength": 80, "minLength": 1, "title": "Model Version", "type": "string"}, "scenario": {"anyOf": [{"$ref": "#/components/schemas/FireExposure_SurfaceFireScenario"}, {"$ref": "#/components/schemas/FireExposure_LandscapeScenario"}, {"type": "null"}], "default": null, "title": "Scenario"}, "schema_version": {"default": "1", "enum": ["1", "2"], "title": "Schema Version", "type": "string"}, "warnings": {"items": {"type": "string"}, "maxItems": 20, "title": "Warnings", "type": "array"}, "weather": {"anyOf": [{"$ref": "#/components/schemas/FireExposure_WeatherObservation"}, {"type": "null"}], "default": null}}, "required": ["assessment_id", "fire_ref", "input_hash", "model_version", "availability", "mode", "calculated_at", "fire", "geojson", "assumptions"], "title": "AssessmentResult", "type": "object"}
+    FireExposure_ExposureAssessmentRequest: {"additionalProperties": false, "properties": {"assessment_id": {"maxLength": 36, "minLength": 36, "title": "Assessment Id", "type": "string"}, "fire": {"$ref": "#/components/schemas/FireExposure_FireObservation"}, "fire_ref": {"maxLength": 512, "minLength": 1, "title": "Fire Ref", "type": "string"}, "input_hash": {"pattern": "^[a-f0-9]{64}$", "title": "Input Hash", "type": "string"}, "mode": {"default": "exposure", "enum": ["exposure", "surface_fire"], "title": "Mode", "type": "string"}, "parameters": {"$ref": "#/components/schemas/FireExposure_ExposureParameters"}, "scenario": {"anyOf": [{"$ref": "#/components/schemas/FireExposure_SurfaceFireScenario"}, {"type": "null"}], "default": null}, "schema_version": {"const": "1", "default": "1", "title": "Schema Version", "type": "string"}, "weather": {"anyOf": [{"$ref": "#/components/schemas/FireExposure_WeatherObservation"}, {"type": "null"}], "default": null}}, "required": ["assessment_id", "fire_ref", "input_hash", "fire", "parameters"], "title": "ExposureAssessmentRequest", "type": "object"}
+    FireExposure_ExposureFeature: {"additionalProperties": false, "properties": {"geometry": {"discriminator": {"mapping": {"MultiPolygon": "#/components/schemas/FireExposure_MultiPolygonGeometry", "Polygon": "#/components/schemas/FireExposure_PolygonGeometry"}, "propertyName": "type"}, "oneOf": [{"$ref": "#/components/schemas/FireExposure_PolygonGeometry"}, {"$ref": "#/components/schemas/FireExposure_MultiPolygonGeometry"}], "title": "Geometry"}, "properties": {"$ref": "#/components/schemas/FireExposure_FeatureProperties"}, "type": {"const": "Feature", "default": "Feature", "title": "Type", "type": "string"}}, "required": ["geometry", "properties"], "title": "ExposureFeature", "type": "object"}
+    FireExposure_ExposureParameters: {"additionalProperties": false, "properties": {"distance_bands_km": {"items": {"type": "number"}, "maxItems": 6, "minItems": 1, "title": "Distance Bands Km", "type": "array"}, "max_wind_stretch": {"maximum": 3, "minimum": 1, "title": "Max Wind Stretch", "type": "number"}, "ring_points": {"maximum": 360, "minimum": 32, "title": "Ring Points", "type": "integer"}, "wind_shape_scale": {"maximum": 1, "minimum": 0, "title": "Wind Shape Scale", "type": "number"}}, "required": ["distance_bands_km", "ring_points", "wind_shape_scale", "max_wind_stretch"], "title": "ExposureParameters", "type": "object"}
+    FireExposure_FeatureCollection: {"additionalProperties": false, "properties": {"features": {"items": {"$ref": "#/components/schemas/FireExposure_ExposureFeature"}, "maxItems": 12, "title": "Features", "type": "array"}, "type": {"const": "FeatureCollection", "default": "FeatureCollection", "title": "Type", "type": "string"}}, "title": "FeatureCollection", "type": "object"}
+    FireExposure_FeatureProperties: {"additionalProperties": false, "properties": {"elapsed_minutes": {"anyOf": [{"exclusiveMinimum": 0, "maximum": 120, "type": "number"}, {"type": "null"}], "default": null, "title": "Elapsed Minutes"}, "inner_km": {"anyOf": [{"maximum": 200, "minimum": 0, "type": "number"}, {"type": "null"}], "default": null, "title": "Inner Km"}, "kind": {"enum": ["proximity", "downwind", "surface_fire", "landscape"], "title": "Kind", "type": "string"}, "label": {"maxLength": 300, "minLength": 1, "title": "Label", "type": "string"}, "outer_km": {"anyOf": [{"exclusiveMinimum": 0, "maximum": 200, "type": "number"}, {"type": "null"}], "default": null, "title": "Outer Km"}, "wind_from_degrees": {"anyOf": [{"maximum": 360, "minimum": 0, "type": "number"}, {"type": "null"}], "default": null, "title": "Wind From Degrees"}}, "required": ["kind", "label"], "title": "FeatureProperties", "type": "object"}
+    FireExposure_FireObservation: {"additionalProperties": false, "properties": {"latitude": {"maximum": 90, "minimum": -90, "title": "Latitude", "type": "number"}, "longitude": {"maximum": 180, "minimum": -180, "title": "Longitude", "type": "number"}, "name": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Name"}, "perimeter": {"anyOf": [{"discriminator": {"mapping": {"MultiPolygon": "#/components/schemas/FireExposure_MultiPolygonGeometry", "Polygon": "#/components/schemas/FireExposure_PolygonGeometry"}, "propertyName": "type"}, "oneOf": [{"$ref": "#/components/schemas/FireExposure_PolygonGeometry"}, {"$ref": "#/components/schemas/FireExposure_MultiPolygonGeometry"}]}, {"type": "null"}], "default": null, "title": "Perimeter"}, "source_id": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Source Id"}, "source_timestamp": {"anyOf": [{"maxLength": 60, "type": "string"}, {"type": "null"}], "default": null, "title": "Source Timestamp"}}, "required": ["latitude", "longitude"], "title": "FireObservation", "type": "object"}
+    FireExposure_FireRiskJobReference: {"additionalProperties": false, "properties": {"fire_refs": {"items": {"type": "string"}, "maxItems": 4, "minItems": 1, "title": "Fire Refs", "type": "array"}, "job_id": {"maxLength": 36, "minLength": 36, "title": "Job Id", "type": "string"}}, "required": ["job_id", "fire_refs"], "title": "FireRiskJobReference", "type": "object"}
+    FireExposure_FireRiskJobResponse: {"additionalProperties": false, "properties": {"assessments": {"items": {"$ref": "#/components/schemas/FireExposure_AssessmentResult"}, "maxItems": 4, "title": "Assessments", "type": "array"}, "error": {"anyOf": [{"maxLength": 300, "type": "string"}, {"type": "null"}], "default": null, "title": "Error"}, "fire_refs": {"items": {"type": "string"}, "maxItems": 4, "minItems": 1, "title": "Fire Refs", "type": "array"}, "job_id": {"maxLength": 36, "minLength": 36, "title": "Job Id", "type": "string"}, "phase": {"maxLength": 300, "minLength": 1, "title": "Phase", "type": "string"}, "progress": {"maximum": 1, "minimum": 0, "title": "Progress", "type": "number"}, "status": {"enum": ["queued", "running", "completed", "failed", "cancelling", "cancelled"], "title": "Status", "type": "string"}}, "required": ["job_id", "fire_refs", "status", "phase", "progress"], "title": "FireRiskJobResponse", "type": "object"}
+    FireExposure_FireRiskPreparationError: {"additionalProperties": false, "description": "A failed answer-to-job handoff; provider/SDK error details never become public content.", "properties": {"code": {"const": "RISK_PREPARATION_FAILED", "title": "Code", "type": "string"}, "message": {"const": "Terrain assessment preparation could not be queued.", "title": "Message", "type": "string"}}, "required": ["code", "message"], "title": "FireRiskPreparationError", "type": "object"}
+    FireExposure_FireRiskRetryRequest: {"additionalProperties": false, "properties": {"request_id": {"format": "uuid", "title": "Request Id", "type": "string"}}, "required": ["request_id"], "title": "FireRiskRetryRequest", "type": "object"}
+    FireExposure_LandscapeAssessmentRequest: {"additionalProperties": false, "properties": {"assessment_id": {"maxLength": 36, "minLength": 36, "title": "Assessment Id", "type": "string"}, "fire": {"$ref": "#/components/schemas/FireExposure_FireObservation"}, "fire_ref": {"maxLength": 512, "minLength": 1, "title": "Fire Ref", "type": "string"}, "input_hash": {"pattern": "^[a-f0-9]{64}$", "title": "Input Hash", "type": "string"}, "landscape": {"$ref": "#/components/schemas/FireExposure_LandscapeInput"}, "mode": {"const": "landscape", "default": "landscape", "title": "Mode", "type": "string"}, "scenario": {"$ref": "#/components/schemas/FireExposure_LandscapeScenario"}, "schema_version": {"const": "2", "default": "2", "title": "Schema Version", "type": "string"}, "weather": {"$ref": "#/components/schemas/FireExposure_WeatherObservation"}}, "required": ["assessment_id", "fire_ref", "input_hash", "fire", "weather", "scenario", "landscape"], "title": "LandscapeAssessmentRequest", "type": "object"}
+    FireExposure_LandscapeInput: {"additionalProperties": false, "properties": {"encoding": {"const": "zlib-base64-int16-float32-le", "default": "zlib-base64-int16-float32-le", "title": "Encoding", "type": "string"}, "manifest": {"$ref": "#/components/schemas/FireExposure_LandscapeManifest"}, "raster_data": {"maxLength": 2100000, "minLength": 1, "title": "Raster Data", "type": "string"}}, "required": ["manifest", "raster_data"], "title": "LandscapeInput", "type": "object"}
+    FireExposure_LandscapeManifest: {"additionalProperties": false, "description": "A sealed numerical crop; regional routing never changes the declared products.", "properties": {"captured_at": {"maxLength": 60, "title": "Captured At", "type": "string"}, "crs": {"enum": ["EPSG:5070", "EPSG:3338", "ESRI:102007"], "title": "Crs", "type": "string"}, "elevation_product": {"const": "LANDFIRE LF2020 Elev", "default": "LANDFIRE LF2020 Elev", "title": "Elevation Product", "type": "string"}, "elevation_sha256": {"pattern": "^[a-f0-9]{64}$", "title": "Elevation Sha256", "type": "string"}, "elevation_source": {"maxLength": 200, "title": "Elevation Source", "type": "string"}, "elevation_units": {"const": "metres", "default": "metres", "title": "Elevation Units", "type": "string"}, "fuel_product": {"const": "LANDFIRE LF2024 FBFM40", "default": "LANDFIRE LF2024 FBFM40", "title": "Fuel Product", "type": "string"}, "fuel_sha256": {"pattern": "^[a-f0-9]{64}$", "title": "Fuel Sha256", "type": "string"}, "fuel_source": {"maxLength": 200, "title": "Fuel Source", "type": "string"}, "height": {"maximum": 1000, "minimum": 5, "title": "Height", "type": "integer"}, "nodata": {"const": -9999, "default": -9999, "title": "Nodata", "type": "integer"}, "north": {"title": "North", "type": "number"}, "raster_sha256": {"pattern": "^[a-f0-9]{64}$", "title": "Raster Sha256", "type": "string"}, "region": {"enum": ["CONUS", "AK", "HI"], "title": "Region", "type": "string"}, "resolution_m": {"maximum": 30, "minimum": 30, "title": "Resolution M", "type": "number"}, "west": {"title": "West", "type": "number"}, "width": {"maximum": 1000, "minimum": 5, "title": "Width", "type": "integer"}}, "required": ["region", "fuel_source", "elevation_source", "captured_at", "crs", "width", "height", "resolution_m", "west", "north", "raster_sha256", "fuel_sha256", "elevation_sha256"], "title": "LandscapeManifest", "type": "object"}
+    FireExposure_LandscapeScenario: {"additionalProperties": false, "properties": {"directional_radius": {"maximum": 5, "minimum": 1, "title": "Directional Radius", "type": "integer"}, "engine": {"const": "Pyrothermel/Behave directional arrival grid", "default": "Pyrothermel/Behave directional arrival grid", "title": "Engine", "type": "string"}, "horizons_minutes": {"items": {"type": "number"}, "maxItems": 6, "minItems": 1, "title": "Horizons Minutes", "type": "array"}, "initialization": {"const": "reported point treated as demo ignition", "title": "Initialization", "type": "string"}, "moisture_profile": {"enum": ["low", "moderate", "high"], "title": "Moisture Profile", "type": "string"}, "wind_height_assumption": {"const": "DTN wind treated as 10 m above ground; open unsheltered fuel assumed", "title": "Wind Height Assumption", "type": "string"}}, "required": ["moisture_profile", "wind_height_assumption", "initialization", "horizons_minutes", "directional_radius"], "title": "LandscapeScenario", "type": "object"}
+    FireExposure_LandscapeSummary: {"additionalProperties": false, "properties": {"directional_radius": {"maximum": 5, "minimum": 1, "title": "Directional Radius", "type": "integer"}, "ignition_aspect_degrees": {"maximum": 360, "minimum": 0, "title": "Ignition Aspect Degrees", "type": "number"}, "ignition_column": {"minimum": 0, "title": "Ignition Column", "type": "integer"}, "ignition_fuel_model": {"title": "Ignition Fuel Model", "type": "integer"}, "ignition_row": {"minimum": 0, "title": "Ignition Row", "type": "integer"}, "ignition_slope_degrees": {"maximum": 90, "minimum": 0, "title": "Ignition Slope Degrees", "type": "number"}, "manifest": {"$ref": "#/components/schemas/FireExposure_LandscapeManifest"}, "maximum_arrival_minutes": {"minimum": 0, "title": "Maximum Arrival Minutes", "type": "number"}, "modeled_cells": {"minimum": 0, "title": "Modeled Cells", "type": "integer"}, "native_states": {"minimum": 0, "title": "Native States", "type": "integer"}, "nodata_cells": {"minimum": 0, "title": "Nodata Cells", "type": "integer"}, "nonburnable_cells": {"minimum": 0, "title": "Nonburnable Cells", "type": "integer"}, "reached_cells": {"minimum": 0, "title": "Reached Cells", "type": "integer"}, "solver": {"const": "directed-cell-arrival-1", "default": "directed-cell-arrival-1", "title": "Solver", "type": "string"}, "spread_cells": {"minimum": 0, "title": "Spread Cells", "type": "integer"}}, "required": ["manifest", "directional_radius", "ignition_row", "ignition_column", "ignition_fuel_model", "ignition_slope_degrees", "ignition_aspect_degrees", "reached_cells", "spread_cells", "modeled_cells", "nonburnable_cells", "nodata_cells", "native_states", "maximum_arrival_minutes"], "title": "LandscapeSummary", "type": "object"}
+    FireExposure_MultiPolygonGeometry: {"additionalProperties": false, "properties": {"coordinates": {"items": {"items": {"items": {"items": {"type": "number"}, "maxItems": 2, "minItems": 2, "type": "array"}, "minItems": 4, "type": "array"}, "minItems": 1, "type": "array"}, "minItems": 1, "title": "Coordinates", "type": "array"}, "type": {"const": "MultiPolygon", "default": "MultiPolygon", "title": "Type", "type": "string"}}, "required": ["coordinates"], "title": "MultiPolygonGeometry", "type": "object"}
+    FireExposure_PolygonGeometry: {"additionalProperties": false, "properties": {"coordinates": {"items": {"items": {"items": {"type": "number"}, "maxItems": 2, "minItems": 2, "type": "array"}, "minItems": 4, "type": "array"}, "minItems": 1, "title": "Coordinates", "type": "array"}, "type": {"const": "Polygon", "default": "Polygon", "title": "Type", "type": "string"}}, "required": ["coordinates"], "title": "PolygonGeometry", "type": "object"}
+    FireExposure_SurfaceFireScenario: {"additionalProperties": false, "properties": {"engine": {"const": "Pyrothermel/Behave", "default": "Pyrothermel/Behave", "title": "Engine", "type": "string"}, "fuel_model": {"maximum": 13, "minimum": 1, "title": "Fuel Model", "type": "integer"}, "horizons_minutes": {"items": {"type": "number"}, "maxItems": 6, "minItems": 1, "title": "Horizons Minutes", "type": "array"}, "initialization": {"const": "reported point treated as demo ignition", "title": "Initialization", "type": "string"}, "moisture_profile": {"enum": ["low", "moderate", "high"], "title": "Moisture Profile", "type": "string"}, "slope_degrees": {"maximum": 0, "minimum": 0, "title": "Slope Degrees", "type": "number"}, "wind_height_assumption": {"const": "DTN wind treated as 10 m above ground; open unsheltered fuel assumed", "title": "Wind Height Assumption", "type": "string"}}, "required": ["fuel_model", "moisture_profile", "slope_degrees", "wind_height_assumption", "initialization", "horizons_minutes"], "title": "SurfaceFireScenario", "type": "object"}
+    FireExposure_WeatherObservation: {"additionalProperties": false, "properties": {"availability": {"enum": ["available", "unavailable", "stale"], "title": "Availability", "type": "string"}, "observed_at": {"anyOf": [{"maxLength": 60, "type": "string"}, {"type": "null"}], "default": null, "title": "Observed At"}, "query_latitude": {"maximum": 90, "minimum": -90, "title": "Query Latitude", "type": "number"}, "query_longitude": {"maximum": 180, "minimum": -180, "title": "Query Longitude", "type": "number"}, "relative_humidity_percent": {"anyOf": [{"maximum": 100, "minimum": 0, "type": "number"}, {"type": "null"}], "default": null, "title": "Relative Humidity Percent"}, "source": {"const": "DTN", "default": "DTN", "title": "Source", "type": "string"}, "temperature_c": {"anyOf": [{"maximum": 100, "minimum": -100, "type": "number"}, {"type": "null"}], "default": null, "title": "Temperature C"}, "wind_from_degrees": {"anyOf": [{"maximum": 360, "minimum": 0, "type": "number"}, {"type": "null"}], "default": null, "title": "Wind From Degrees"}, "wind_speed_mps": {"anyOf": [{"maximum": 150, "minimum": 0, "type": "number"}, {"type": "null"}], "default": null, "title": "Wind Speed Mps"}}, "required": ["query_latitude", "query_longitude", "availability"], "title": "WeatherObservation", "type": "object"}
+    # END GENERATED FIRE EXPOSURE CONTRACTS

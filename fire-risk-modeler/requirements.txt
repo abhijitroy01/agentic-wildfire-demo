@@ -1,0 +1,10 @@
+# Independent stateless modeler runtime (Python 3.14); constrained by the repository lock.
+fastapi==0.141.1
+pydantic==2.13.5
+pyproj==3.8.0
+pyrothermel==0.1.4
+shapely==2.1.2
+uvicorn==0.53.0
+httpx==0.28.1
+numpy==2.5.3
+pillow==12.3.0

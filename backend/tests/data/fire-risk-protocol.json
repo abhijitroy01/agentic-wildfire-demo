@@ -1,0 +1,246 @@
+{
+  "schema_version": "2",
+  "assessment_id": "bb673bd2-6b38-4f29-b15e-d0ee3df98bb1",
+  "fire_ref": "offline-reference-KING",
+  "input_hash": "2dffb69408331a43a5ed24ca5cdfd0c90677fa1245c165338b0b7b31714ecc42",
+  "model_version": "landscape-surface-fire-1.0.0",
+  "availability": "available",
+  "mode": "landscape",
+  "calculated_at": "2026-10-27T17:02:39.931258+00:00",
+  "fire": {
+    "latitude": 47.470805726545464,
+    "longitude": -121.25588168570884,
+    "name": "KING",
+    "source_id": null,
+    "source_timestamp": null,
+    "perimeter": null
+  },
+  "weather": {
+    "query_latitude": 47.470805726545464,
+    "query_longitude": -121.25588168570884,
+    "observed_at": "2026-10-27T16:40:52.381380+00:00",
+    "availability": "available",
+    "wind_speed_mps": 5.0,
+    "wind_from_degrees": 270.0,
+    "source": "DTN",
+    "temperature_c": null,
+    "relative_humidity_percent": null
+  },
+  "geojson": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -121.2560394562,
+                47.4710288448
+              ],
+              [
+                -121.2559355897,
+                47.4707668467
+              ],
+              [
+                -121.255554006,
+                47.4708381614
+              ],
+              [
+                -121.2556578711,
+                47.4711001599
+              ],
+              [
+                -121.2560394562,
+                47.4710288448
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "kind": "landscape",
+          "label": "15 minutes \u2014 landscape surface-fire demo",
+          "inner_km": null,
+          "outer_km": null,
+          "elapsed_minutes": 15.0,
+          "wind_from_degrees": 270.0
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -121.2559355897,
+                47.4707668467
+              ],
+              [
+                -121.255554006,
+                47.4708381614
+              ],
+              [
+                -121.2551724214,
+                47.4709094751
+              ],
+              [
+                -121.2552762851,
+                47.4711714739
+              ],
+              [
+                -121.2556578711,
+                47.4711001599
+              ],
+              [
+                -121.2560394562,
+                47.4710288448
+              ],
+              [
+                -121.2559355897,
+                47.4707668467
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "kind": "landscape",
+          "label": "30 minutes \u2014 landscape surface-fire demo",
+          "inner_km": null,
+          "outer_km": null,
+          "elapsed_minutes": 30.0,
+          "wind_from_degrees": 270.0
+        }
+      },
+      {
+        "type": "Feature",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -121.2554501417,
+                47.4705761632
+              ],
+              [
+                -121.2550685586,
+                47.4706474765
+              ],
+              [
+                -121.2546869746,
+                47.4707187888
+              ],
+              [
+                -121.254790836,
+                47.4709807878
+              ],
+              [
+                -121.2548946983,
+                47.4712427869
+              ],
+              [
+                -121.2552762851,
+                47.4711714739
+              ],
+              [
+                -121.2553801496,
+                47.4714334729
+              ],
+              [
+                -121.255761737,
+                47.4713621585
+              ],
+              [
+                -121.2556578711,
+                47.4711001599
+              ],
+              [
+                -121.2560394562,
+                47.4710288448
+              ],
+              [
+                -121.2559355897,
+                47.4707668467
+              ],
+              [
+                -121.255831724,
+                47.4705048488
+              ],
+              [
+                -121.2554501417,
+                47.4705761632
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "kind": "landscape",
+          "label": "60 minutes \u2014 landscape surface-fire demo",
+          "inner_km": null,
+          "outer_km": null,
+          "elapsed_minutes": 60.0,
+          "wind_from_degrees": 270.0
+        }
+      }
+    ]
+  },
+  "assumptions": [
+    "Terrain/fuel-informed surface-fire demo; not a calibrated probability or evacuation forecast.",
+    "Reported point treated as demo ignition, not a verified current active fire front.",
+    "Assumed moderate dead/live fuel moisture; humidity is not fuel moisture.",
+    "DTN wind treated as 10 m above ground; open unsheltered fuel assumed",
+    "Static DTN wind; local terrain and mapped LANDFIRE fuel vary across the grid.",
+    "Directed finite-grid arrival approximation; no spotting, crown fire, suppression or urban structure fire.",
+    "Native surface rates integrated over terrain-plane distances; no-data cells are not established as safe."
+  ],
+  "warnings": [],
+  "scenario": {
+    "engine": "Pyrothermel/Behave directional arrival grid",
+    "moisture_profile": "moderate",
+    "wind_height_assumption": "DTN wind treated as 10 m above ground; open unsheltered fuel assumed",
+    "initialization": "reported point treated as demo ignition",
+    "horizons_minutes": [
+      15.0,
+      30.0,
+      60.0
+    ],
+    "directional_radius": 5
+  },
+  "landscape": {
+    "manifest": {
+      "region": "CONUS",
+      "fuel_product": "LANDFIRE LF2024 FBFM40",
+      "elevation_product": "LANDFIRE LF2020 Elev",
+      "fuel_source": "https://lfps.usgs.gov/arcgis/rest/services/Landfire_LF2024/LF2024_FBFM40_CONUS/ImageServer",
+      "elevation_source": "https://lfps.usgs.gov/arcgis/rest/services/Landfire_Topo/LF2020_Elev_CONUS/ImageServer",
+      "captured_at": "2026-10-27T16:40:52.381380+00:00",
+      "crs": "EPSG:5070",
+      "width": 100,
+      "height": 100,
+      "resolution_m": 30.0,
+      "west": -1894935.0,
+      "north": 2974335.0,
+      "nodata": -9999,
+      "elevation_units": "metres",
+      "raster_sha256": "5cc41490c8bef670886379d1fb62ca96bc9afd9e27e9767654ee1328c33e5bcc",
+      "fuel_sha256": "55c8214271ddc6a372f24065e5f38aa009dbf82c1c9f5ce51be9af74fa18338e",
+      "elevation_sha256": "3703d795122c1ea6a50001be9686a64107806d8286585fa687a528f7cf9ec696"
+    },
+    "solver": "directed-cell-arrival-1",
+    "directional_radius": 5,
+    "ignition_row": 49,
+    "ignition_column": 50,
+    "ignition_fuel_model": 122,
+    "ignition_slope_degrees": 23.529003201272364,
+    "ignition_aspect_degrees": 90.41027724300977,
+    "reached_cells": 7,
+    "spread_cells": 6,
+    "modeled_cells": 9768,
+    "nonburnable_cells": 232,
+    "nodata_cells": 0,
+    "native_states": 156,
+    "maximum_arrival_minutes": 60.0
+  },
+  "failure": null
+}

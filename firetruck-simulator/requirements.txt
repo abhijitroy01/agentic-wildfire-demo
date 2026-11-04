@@ -1,0 +1,19 @@
+# Fire Truck Simulator - Dependencies
+# Direct imports only; python-dotenv (pydantic-settings), python-dateutil (botocore) and websockets
+# (uvicorn[standard]) arrive with the packages that need them, pinned by requirements-lock.txt.
+# FastAPI and server
+# These versions also satisfy the shared root development environment.
+fastapi==0.141.1
+# The [standard] extra stays: it gives the private service (api/private.py, HTTP only) uvloop and httptools,
+# so dropping it would change the deployed HTTP server.
+uvicorn[standard]==0.53.0
+
+# Pydantic for data validation
+pydantic==2.13.5
+pydantic-settings==2.6.1
+
+# Transport for fastapi.testclient, which the tests use in the in-image unittest gate (no service code imports it)
+httpx==0.28.1
+
+# Private evidence persistence
+boto3==1.43.97

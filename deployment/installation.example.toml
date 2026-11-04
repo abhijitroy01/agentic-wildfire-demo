@@ -1,0 +1,94 @@
+# FireGUard installation file: the identity and choices of one installation (decision D24).
+#
+# Copy this file to deployment/installation.toml (git-ignored), fill in your values, then run
+#   bash deployment/deploy-all.sh           check and plan; makes no AWS changes
+#   bash deployment/deploy-all.sh --apply   deploy or update
+# To keep several installations, put each file in deployment/installations/ (also git-ignored) and pass its
+# path: bash deployment/deploy-all.sh deployment/installations/staging.toml
+#
+# Neither this file nor deployment/settings.toml ever holds a secret. Provider keys stay in AWS Secrets
+# Manager; [providers] only names that secret. Unknown keys are errors, so a typo cannot be ignored.
+
+[aws]
+# AWS CLI profile used for every AWS call. Its account must equal account_id.
+profile = "your-deploy-profile"
+# The twelve-digit AWS account of this installation.
+account_id = "123456789012"
+# The AWS Region of this installation.
+region = "us-west-2"
+# Installation name: 3-20 lowercase letters, digits or hyphens, starting with a letter. Account, Region and
+# name together identify the installation; reuse them to update it, change any of them to create another.
+name = "wildfire-demo"
+# development, staging or production. An installation keeps the value it was created with; the live
+# installation uses production.
+environment = "production"
+# IAM roles whose sessions may read and write this installation's bucket objects besides its own service roles:
+# the role behind profile (aws sts get-caller-identity --profile <profile> names it) and any break-glass role.
+# Full role ARNs in account_id, 1-10 of them; the bucket policies refuse object access to every other principal.
+operator_role_arns = ["arn:aws:iam::123456789012:role/your-deploy-role"]
+
+[access]
+# "public": anyone can use the application through CloudFront.
+# "staging": only the networks in staging_allowed_cidrs can use it while you review the installation; WAF
+# blocks every other address.
+mode = "public"
+# CIDR ranges allowed to reach a staging installation, for example ["198.51.100.0/24", "2001:db8::/48"].
+# Write a single address as /32 (IPv4) or /128 (IPv6). List your IPv6 range too: CloudFront accepts IPv6
+# viewers. Required, and not empty, when mode = "staging"; ignored when mode = "public". /0 is refused.
+staging_allowed_cidrs = []
+
+[models]
+# Bedrock model or inference profile IDs available to this account and Region.
+# The investigation and simulation agents and the radio extraction use the agent model.
+agent_model_id = "your-agent-model-or-inference-profile-id"
+# The Response Tracker report specialist uses the report model.
+report_model_id = "your-report-model-or-inference-profile-id"
+
+[radio]
+# One to ten prerecorded MP3, WAV, M4A, OGG or FLAC files, each at most 50 MiB: local paths or
+# s3://bucket/key objects. The deployer copies them; the originals are never changed.
+recordings = ["/path/to/recording.mp3"]
+
+[knowledge]
+# Public guidance for anonymous users:
+#   "managed"   provision, ingest, verify and bind the reviewed public collection (separate retained stack)
+#   "existing"  bind public_knowledge_base_id, an existing public KB with the collection metadata contract
+#   "none"      public retrieval is unavailable
+public_guidance = "managed"
+# Required when public_guidance = "existing". Otherwise "".
+public_knowledge_base_id = ""
+
+[providers]
+# ARN of a Secrets Manager JSON secret in this account and Region with DTN_CLIENT_ID, DTN_CLIENT_SECRET and
+# TOMTOM_API_KEY (and optionally NASA_FIRMS_API_KEY and DELPHIRE_API_KEY). Only the ARN goes here, never a key
+# value.
+secret_arn = "arn:aws:secretsmanager:us-west-2:123456789012:secret:your-provider-secret"
+
+[camera]
+# Optional: the Delphire camera the public demo may show through the server broker. Map popups offer
+# "View Camera Feed" only while it is configured. device_id = "" (or no [camera] section) keeps it off.
+# The key never goes here: add DELPHIRE_API_KEY to the secret named by [providers] secret_arn. A device ID
+# without that key, or the key without a device ID, stops the check.
+# The Delphire API origin: https:// and a host name only.
+api_base_url = "https://wildfireai.com"
+# The Delphire device ID, or "" for no camera.
+device_id = ""
+# camera_a, camera_b, infrared_camera_a, infrared_camera_b or test_camera_a.
+camera_alias = "camera_a"
+
+# Optional: change a deployment/settings.toml value for this installation only. Use the same section and
+# key, and a value within the allowed range; the plan shows every value that differs from settings.toml.
+# [settings.rate_limits]
+# requests_per_ip_per_5_minutes = 1200
+#
+# For example, a smaller SUMO worker (a Fargate CPU and memory pair) that simulates two policies at once:
+# [settings.capacity]
+# worker_vcpu = 2
+# worker_memory_gib = 4
+# [settings.simulation]
+# policy_parallelism = 2
+#
+# Or a test installation whose worker pre-builds no demo areas and keeps shared road networks for a week:
+# [settings.cache]
+# demo_areas_to_prebuild = []
+# network_cache_days = 7

@@ -1,0 +1,19 @@
+/* Citation presentation follows the enclosing workspace theme. */
+.citation-item { display:flex; gap:12px; padding:14px; background:var(--surface,#252540);
+  color:var(--ink,#e0e0f0); border:1px solid var(--line,#53536c); border-radius:8px; overflow-wrap:anywhere; }
+.citation-number { flex-shrink:0; width:28px; height:28px; background:var(--accent,#357abd); color:white;
+  border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; }
+.citation-content { flex:1; min-width:0; }
+.citation-document { font-weight:600; color:var(--accent,#93c5fd); font-size:14px; margin-bottom:6px; }
+.citation-document a { color:inherit; text-underline-offset:3px; }
+.citation-document a:focus-visible { outline:3px solid #b56a14; outline-offset:3px; }
+.citation-excerpt { color:inherit; font-size:13px; line-height:1.6; margin-top:10px;
+  padding-left:12px; border-left:2px solid var(--line,#53536c); }
+.citation-list-compact, .detail-section-full { display:flex; flex-direction:column; gap:10px; }
+.citation-item.compact { padding:10px; gap:10px; }
+.citation-number.compact { width:24px; height:24px; font-size:11px; }
+.citation-document.compact, .citation-excerpt.compact { font-size:12px; }
+.citation-item.folded { display:block; margin:0; }
+.citation-item.folded summary { cursor:pointer; font-weight:600; font-size:14px; }
+.citation-item.folded summary span { font-weight:400; }
+.citation-item.folded .citation-content { padding-top:14px; }

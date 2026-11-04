@@ -1,0 +1,1335 @@
+{
+  "components": {
+    "schemas": {
+      "AssessmentFailure": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "DTN_WIND_UNUSABLE",
+              "LANDSCAPE_INPUT_INVALID",
+              "LANDSCAPE_COVERAGE_MISSING",
+              "LANDSCAPE_REQUEST_FAILED",
+              "LANDSCAPE_NODATA",
+              "IGNITION_DATA_CONFLICT",
+              "FUEL_CODE_UNSUPPORTED",
+              "DOMAIN_TRUNCATED",
+              "CALCULATION_FAILED",
+              "CALCULATION_LIMIT"
+            ],
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "AssessmentFailure",
+        "type": "object"
+      },
+      "AssessmentResult": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment_id": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Assessment Id",
+            "type": "string"
+          },
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "calculated_at": {
+            "maxLength": 60,
+            "title": "Calculated At",
+            "type": "string"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssessmentFailure"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "fire": {
+            "$ref": "#/components/schemas/FireObservation"
+          },
+          "fire_ref": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Fire Ref",
+            "type": "string"
+          },
+          "geojson": {
+            "$ref": "#/components/schemas/FeatureCollection"
+          },
+          "input_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "landscape": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LandscapeSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "mode": {
+            "enum": [
+              "proximity",
+              "wind_informed",
+              "surface_fire",
+              "landscape"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "model_version": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Model Version",
+            "type": "string"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SurfaceFireScenario"
+              },
+              {
+                "$ref": "#/components/schemas/LandscapeScenario"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Scenario"
+          },
+          "schema_version": {
+            "default": "1",
+            "enum": [
+              "1",
+              "2"
+            ],
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Warnings",
+            "type": "array"
+          },
+          "weather": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeatherObservation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "assessment_id",
+          "fire_ref",
+          "input_hash",
+          "model_version",
+          "availability",
+          "mode",
+          "calculated_at",
+          "fire",
+          "geojson",
+          "assumptions"
+        ],
+        "title": "AssessmentResult",
+        "type": "object"
+      },
+      "ExposureAssessmentRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment_id": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Assessment Id",
+            "type": "string"
+          },
+          "fire": {
+            "$ref": "#/components/schemas/FireObservation"
+          },
+          "fire_ref": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Fire Ref",
+            "type": "string"
+          },
+          "input_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "mode": {
+            "default": "exposure",
+            "enum": [
+              "exposure",
+              "surface_fire"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "parameters": {
+            "$ref": "#/components/schemas/ExposureParameters"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SurfaceFireScenario"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "schema_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "weather": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeatherObservation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "assessment_id",
+          "fire_ref",
+          "input_hash",
+          "fire",
+          "parameters"
+        ],
+        "title": "ExposureAssessmentRequest",
+        "type": "object"
+      },
+      "ExposureFeature": {
+        "additionalProperties": false,
+        "properties": {
+          "geometry": {
+            "discriminator": {
+              "mapping": {
+                "MultiPolygon": "#/components/schemas/MultiPolygonGeometry",
+                "Polygon": "#/components/schemas/PolygonGeometry"
+              },
+              "propertyName": "type"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PolygonGeometry"
+              },
+              {
+                "$ref": "#/components/schemas/MultiPolygonGeometry"
+              }
+            ],
+            "title": "Geometry"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/FeatureProperties"
+          },
+          "type": {
+            "const": "Feature",
+            "default": "Feature",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "geometry",
+          "properties"
+        ],
+        "title": "ExposureFeature",
+        "type": "object"
+      },
+      "ExposureParameters": {
+        "additionalProperties": false,
+        "properties": {
+          "distance_bands_km": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Distance Bands Km",
+            "type": "array"
+          },
+          "max_wind_stretch": {
+            "maximum": 3,
+            "minimum": 1,
+            "title": "Max Wind Stretch",
+            "type": "number"
+          },
+          "ring_points": {
+            "maximum": 360,
+            "minimum": 32,
+            "title": "Ring Points",
+            "type": "integer"
+          },
+          "wind_shape_scale": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Wind Shape Scale",
+            "type": "number"
+          }
+        },
+        "required": [
+          "distance_bands_km",
+          "ring_points",
+          "wind_shape_scale",
+          "max_wind_stretch"
+        ],
+        "title": "ExposureParameters",
+        "type": "object"
+      },
+      "FeatureCollection": {
+        "additionalProperties": false,
+        "properties": {
+          "features": {
+            "items": {
+              "$ref": "#/components/schemas/ExposureFeature"
+            },
+            "maxItems": 12,
+            "title": "Features",
+            "type": "array"
+          },
+          "type": {
+            "const": "FeatureCollection",
+            "default": "FeatureCollection",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "title": "FeatureCollection",
+        "type": "object"
+      },
+      "FeatureProperties": {
+        "additionalProperties": false,
+        "properties": {
+          "elapsed_minutes": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "maximum": 120,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Elapsed Minutes"
+          },
+          "inner_km": {
+            "anyOf": [
+              {
+                "maximum": 200,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Inner Km"
+          },
+          "kind": {
+            "enum": [
+              "proximity",
+              "downwind",
+              "surface_fire",
+              "landscape"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "outer_km": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "maximum": 200,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Outer Km"
+          },
+          "wind_from_degrees": {
+            "anyOf": [
+              {
+                "maximum": 360,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Wind From Degrees"
+          }
+        },
+        "required": [
+          "kind",
+          "label"
+        ],
+        "title": "FeatureProperties",
+        "type": "object"
+      },
+      "FireObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "latitude": {
+            "maximum": 90,
+            "minimum": -90,
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180,
+            "minimum": -180,
+            "title": "Longitude",
+            "type": "number"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Name"
+          },
+          "perimeter": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "MultiPolygon": "#/components/schemas/MultiPolygonGeometry",
+                    "Polygon": "#/components/schemas/PolygonGeometry"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/PolygonGeometry"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MultiPolygonGeometry"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Perimeter"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Id"
+          },
+          "source_timestamp": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Timestamp"
+          }
+        },
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "FireObservation",
+        "type": "object"
+      },
+      "FireRiskJobReference": {
+        "additionalProperties": false,
+        "properties": {
+          "fire_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Fire Refs",
+            "type": "array"
+          },
+          "job_id": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Job Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "fire_refs"
+        ],
+        "title": "FireRiskJobReference",
+        "type": "object"
+      },
+      "FireRiskJobResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "assessments": {
+            "items": {
+              "$ref": "#/components/schemas/AssessmentResult"
+            },
+            "maxItems": 4,
+            "title": "Assessments",
+            "type": "array"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "fire_refs": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Fire Refs",
+            "type": "array"
+          },
+          "job_id": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Job Id",
+            "type": "string"
+          },
+          "phase": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Phase",
+            "type": "string"
+          },
+          "progress": {
+            "maximum": 1,
+            "minimum": 0,
+            "title": "Progress",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed",
+              "cancelling",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "job_id",
+          "fire_refs",
+          "status",
+          "phase",
+          "progress"
+        ],
+        "title": "FireRiskJobResponse",
+        "type": "object"
+      },
+      "FireRiskPreparationError": {
+        "additionalProperties": false,
+        "description": "A failed answer-to-job handoff; provider/SDK error details never become public content.",
+        "properties": {
+          "code": {
+            "const": "RISK_PREPARATION_FAILED",
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "const": "Terrain assessment preparation could not be queued.",
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "FireRiskPreparationError",
+        "type": "object"
+      },
+      "FireRiskRetryRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "FireRiskRetryRequest",
+        "type": "object"
+      },
+      "LandscapeAssessmentRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "assessment_id": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Assessment Id",
+            "type": "string"
+          },
+          "fire": {
+            "$ref": "#/components/schemas/FireObservation"
+          },
+          "fire_ref": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Fire Ref",
+            "type": "string"
+          },
+          "input_hash": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "landscape": {
+            "$ref": "#/components/schemas/LandscapeInput"
+          },
+          "mode": {
+            "const": "landscape",
+            "default": "landscape",
+            "title": "Mode",
+            "type": "string"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/LandscapeScenario"
+          },
+          "schema_version": {
+            "const": "2",
+            "default": "2",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "weather": {
+            "$ref": "#/components/schemas/WeatherObservation"
+          }
+        },
+        "required": [
+          "assessment_id",
+          "fire_ref",
+          "input_hash",
+          "fire",
+          "weather",
+          "scenario",
+          "landscape"
+        ],
+        "title": "LandscapeAssessmentRequest",
+        "type": "object"
+      },
+      "LandscapeInput": {
+        "additionalProperties": false,
+        "properties": {
+          "encoding": {
+            "const": "zlib-base64-int16-float32-le",
+            "default": "zlib-base64-int16-float32-le",
+            "title": "Encoding",
+            "type": "string"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/LandscapeManifest"
+          },
+          "raster_data": {
+            "maxLength": 2100000,
+            "minLength": 1,
+            "title": "Raster Data",
+            "type": "string"
+          }
+        },
+        "required": [
+          "manifest",
+          "raster_data"
+        ],
+        "title": "LandscapeInput",
+        "type": "object"
+      },
+      "LandscapeManifest": {
+        "additionalProperties": false,
+        "description": "A sealed numerical crop; regional routing never changes the declared products.",
+        "properties": {
+          "captured_at": {
+            "maxLength": 60,
+            "title": "Captured At",
+            "type": "string"
+          },
+          "crs": {
+            "enum": [
+              "EPSG:5070",
+              "EPSG:3338",
+              "ESRI:102007"
+            ],
+            "title": "Crs",
+            "type": "string"
+          },
+          "elevation_product": {
+            "const": "LANDFIRE LF2020 Elev",
+            "default": "LANDFIRE LF2020 Elev",
+            "title": "Elevation Product",
+            "type": "string"
+          },
+          "elevation_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Elevation Sha256",
+            "type": "string"
+          },
+          "elevation_source": {
+            "maxLength": 200,
+            "title": "Elevation Source",
+            "type": "string"
+          },
+          "elevation_units": {
+            "const": "metres",
+            "default": "metres",
+            "title": "Elevation Units",
+            "type": "string"
+          },
+          "fuel_product": {
+            "const": "LANDFIRE LF2024 FBFM40",
+            "default": "LANDFIRE LF2024 FBFM40",
+            "title": "Fuel Product",
+            "type": "string"
+          },
+          "fuel_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Fuel Sha256",
+            "type": "string"
+          },
+          "fuel_source": {
+            "maxLength": 200,
+            "title": "Fuel Source",
+            "type": "string"
+          },
+          "height": {
+            "maximum": 1000,
+            "minimum": 5,
+            "title": "Height",
+            "type": "integer"
+          },
+          "nodata": {
+            "const": -9999,
+            "default": -9999,
+            "title": "Nodata",
+            "type": "integer"
+          },
+          "north": {
+            "title": "North",
+            "type": "number"
+          },
+          "raster_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Raster Sha256",
+            "type": "string"
+          },
+          "region": {
+            "enum": [
+              "CONUS",
+              "AK",
+              "HI"
+            ],
+            "title": "Region",
+            "type": "string"
+          },
+          "resolution_m": {
+            "maximum": 30,
+            "minimum": 30,
+            "title": "Resolution M",
+            "type": "number"
+          },
+          "west": {
+            "title": "West",
+            "type": "number"
+          },
+          "width": {
+            "maximum": 1000,
+            "minimum": 5,
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "region",
+          "fuel_source",
+          "elevation_source",
+          "captured_at",
+          "crs",
+          "width",
+          "height",
+          "resolution_m",
+          "west",
+          "north",
+          "raster_sha256",
+          "fuel_sha256",
+          "elevation_sha256"
+        ],
+        "title": "LandscapeManifest",
+        "type": "object"
+      },
+      "LandscapeScenario": {
+        "additionalProperties": false,
+        "properties": {
+          "directional_radius": {
+            "maximum": 5,
+            "minimum": 1,
+            "title": "Directional Radius",
+            "type": "integer"
+          },
+          "engine": {
+            "const": "Pyrothermel/Behave directional arrival grid",
+            "default": "Pyrothermel/Behave directional arrival grid",
+            "title": "Engine",
+            "type": "string"
+          },
+          "horizons_minutes": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Horizons Minutes",
+            "type": "array"
+          },
+          "initialization": {
+            "const": "reported point treated as demo ignition",
+            "title": "Initialization",
+            "type": "string"
+          },
+          "moisture_profile": {
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Moisture Profile",
+            "type": "string"
+          },
+          "wind_height_assumption": {
+            "const": "DTN wind treated as 10 m above ground; open unsheltered fuel assumed",
+            "title": "Wind Height Assumption",
+            "type": "string"
+          }
+        },
+        "required": [
+          "moisture_profile",
+          "wind_height_assumption",
+          "initialization",
+          "horizons_minutes",
+          "directional_radius"
+        ],
+        "title": "LandscapeScenario",
+        "type": "object"
+      },
+      "LandscapeSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "directional_radius": {
+            "maximum": 5,
+            "minimum": 1,
+            "title": "Directional Radius",
+            "type": "integer"
+          },
+          "ignition_aspect_degrees": {
+            "maximum": 360,
+            "minimum": 0,
+            "title": "Ignition Aspect Degrees",
+            "type": "number"
+          },
+          "ignition_column": {
+            "minimum": 0,
+            "title": "Ignition Column",
+            "type": "integer"
+          },
+          "ignition_fuel_model": {
+            "title": "Ignition Fuel Model",
+            "type": "integer"
+          },
+          "ignition_row": {
+            "minimum": 0,
+            "title": "Ignition Row",
+            "type": "integer"
+          },
+          "ignition_slope_degrees": {
+            "maximum": 90,
+            "minimum": 0,
+            "title": "Ignition Slope Degrees",
+            "type": "number"
+          },
+          "manifest": {
+            "$ref": "#/components/schemas/LandscapeManifest"
+          },
+          "maximum_arrival_minutes": {
+            "minimum": 0,
+            "title": "Maximum Arrival Minutes",
+            "type": "number"
+          },
+          "modeled_cells": {
+            "minimum": 0,
+            "title": "Modeled Cells",
+            "type": "integer"
+          },
+          "native_states": {
+            "minimum": 0,
+            "title": "Native States",
+            "type": "integer"
+          },
+          "nodata_cells": {
+            "minimum": 0,
+            "title": "Nodata Cells",
+            "type": "integer"
+          },
+          "nonburnable_cells": {
+            "minimum": 0,
+            "title": "Nonburnable Cells",
+            "type": "integer"
+          },
+          "reached_cells": {
+            "minimum": 0,
+            "title": "Reached Cells",
+            "type": "integer"
+          },
+          "solver": {
+            "const": "directed-cell-arrival-1",
+            "default": "directed-cell-arrival-1",
+            "title": "Solver",
+            "type": "string"
+          },
+          "spread_cells": {
+            "minimum": 0,
+            "title": "Spread Cells",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "manifest",
+          "directional_radius",
+          "ignition_row",
+          "ignition_column",
+          "ignition_fuel_model",
+          "ignition_slope_degrees",
+          "ignition_aspect_degrees",
+          "reached_cells",
+          "spread_cells",
+          "modeled_cells",
+          "nonburnable_cells",
+          "nodata_cells",
+          "native_states",
+          "maximum_arrival_minutes"
+        ],
+        "title": "LandscapeSummary",
+        "type": "object"
+      },
+      "MultiPolygonGeometry": {
+        "additionalProperties": false,
+        "properties": {
+          "coordinates": {
+            "items": {
+              "items": {
+                "items": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "maxItems": 2,
+                  "minItems": 2,
+                  "type": "array"
+                },
+                "minItems": 4,
+                "type": "array"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "minItems": 1,
+            "title": "Coordinates",
+            "type": "array"
+          },
+          "type": {
+            "const": "MultiPolygon",
+            "default": "MultiPolygon",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coordinates"
+        ],
+        "title": "MultiPolygonGeometry",
+        "type": "object"
+      },
+      "PolygonGeometry": {
+        "additionalProperties": false,
+        "properties": {
+          "coordinates": {
+            "items": {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 2,
+                "minItems": 2,
+                "type": "array"
+              },
+              "minItems": 4,
+              "type": "array"
+            },
+            "minItems": 1,
+            "title": "Coordinates",
+            "type": "array"
+          },
+          "type": {
+            "const": "Polygon",
+            "default": "Polygon",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "coordinates"
+        ],
+        "title": "PolygonGeometry",
+        "type": "object"
+      },
+      "SurfaceFireScenario": {
+        "additionalProperties": false,
+        "properties": {
+          "engine": {
+            "const": "Pyrothermel/Behave",
+            "default": "Pyrothermel/Behave",
+            "title": "Engine",
+            "type": "string"
+          },
+          "fuel_model": {
+            "maximum": 13,
+            "minimum": 1,
+            "title": "Fuel Model",
+            "type": "integer"
+          },
+          "horizons_minutes": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Horizons Minutes",
+            "type": "array"
+          },
+          "initialization": {
+            "const": "reported point treated as demo ignition",
+            "title": "Initialization",
+            "type": "string"
+          },
+          "moisture_profile": {
+            "enum": [
+              "low",
+              "moderate",
+              "high"
+            ],
+            "title": "Moisture Profile",
+            "type": "string"
+          },
+          "slope_degrees": {
+            "maximum": 0,
+            "minimum": 0,
+            "title": "Slope Degrees",
+            "type": "number"
+          },
+          "wind_height_assumption": {
+            "const": "DTN wind treated as 10 m above ground; open unsheltered fuel assumed",
+            "title": "Wind Height Assumption",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fuel_model",
+          "moisture_profile",
+          "slope_degrees",
+          "wind_height_assumption",
+          "initialization",
+          "horizons_minutes"
+        ],
+        "title": "SurfaceFireScenario",
+        "type": "object"
+      },
+      "WeatherObservation": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable",
+              "stale"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Observed At"
+          },
+          "query_latitude": {
+            "maximum": 90,
+            "minimum": -90,
+            "title": "Query Latitude",
+            "type": "number"
+          },
+          "query_longitude": {
+            "maximum": 180,
+            "minimum": -180,
+            "title": "Query Longitude",
+            "type": "number"
+          },
+          "relative_humidity_percent": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Relative Humidity Percent"
+          },
+          "source": {
+            "const": "DTN",
+            "default": "DTN",
+            "title": "Source",
+            "type": "string"
+          },
+          "temperature_c": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": -100,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Temperature C"
+          },
+          "wind_from_degrees": {
+            "anyOf": [
+              {
+                "maximum": 360,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Wind From Degrees"
+          },
+          "wind_speed_mps": {
+            "anyOf": [
+              {
+                "maximum": 150,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Wind Speed Mps"
+          }
+        },
+        "required": [
+          "query_latitude",
+          "query_longitude",
+          "availability"
+        ],
+        "title": "WeatherObservation",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "serviceKey": {
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "Private Fire Exposure Modeler",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/v1/exposure/assessments": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExposureAssessmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentResult"
+                }
+              }
+            },
+            "description": "Completed illustrative assessment"
+          }
+        },
+        "security": [
+          {
+            "serviceKey": []
+          }
+        ]
+      }
+    },
+    "/v1/landscape/assessments": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LandscapeAssessmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssessmentResult"
+                }
+              }
+            },
+            "description": "Completed terrain and fuel scenario or typed failure"
+          }
+        },
+        "security": [
+          {
+            "serviceKey": []
+          }
+        ]
+      }
+    }
+  }
+}

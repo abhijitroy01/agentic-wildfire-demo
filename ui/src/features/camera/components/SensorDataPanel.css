@@ -1,0 +1,122 @@
+/**
+ * SensorDataPanel Styles
+ * Responsive grid layout for environmental sensor metrics
+ */
+
+.sensor-data-panel {
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.sensor-data-panel__title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin: 0 0 10px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sensor-data-panel__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+/* Individual sensor metric card */
+.sensor-metric {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 6px;
+  padding: 10px 8px;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.sensor-metric:hover {
+  background: rgba(15, 23, 42, 0.7);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.sensor-metric__icon {
+  font-size: 1.5rem;
+  margin-bottom: 4px;
+}
+
+.sensor-metric__label {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 2px;
+}
+
+.sensor-metric__value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  text-align: center;
+  word-break: break-word;
+}
+
+/* Status variants */
+.sensor-metric--warning {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.sensor-metric--warning .sensor-metric__value {
+  color: #fbbf24;
+}
+
+.sensor-metric--critical {
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.sensor-metric--critical .sensor-metric__value {
+  color: #f87171;
+}
+
+/* Unavailable state */
+.sensor-metric--unavailable {
+  opacity: 0.5;
+}
+
+.sensor-metric--unavailable .sensor-metric__value {
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .sensor-data-panel__grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .sensor-metric {
+    padding: 8px 6px;
+  }
+
+  .sensor-metric__icon {
+    font-size: 1.25rem;
+  }
+
+  .sensor-metric__value {
+    font-size: 0.8rem;
+  }
+}
+
+/* Larger screens - more columns */
+@media (min-width: 600px) {
+  .sensor-data-panel__grid {
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  }
+}

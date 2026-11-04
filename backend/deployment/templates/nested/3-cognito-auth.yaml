@@ -1,0 +1,187 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Wildfire Backend - Cognito Authentication Stack
+
+Parameters:
+  ParentStackName:
+    Type: String
+  Environment:
+    Type: String
+    Description: Environment name
+
+  ProjectName:
+    Type: String
+    Description: Project name for tagging
+
+  GetCognitoClientSecretFunctionArn:
+    Type: String
+    Description: Lambda ARN for retrieving Cognito client secret from Lambda Functions Stack
+
+  CustomResourceLambdaRoleArn:
+    Type: String
+    Description: ARN of the role GetCognitoClientSecretFunction runs as, from the Infrastructure Stack
+
+  StackEncryptionKeyArn:
+    Type: String
+    Description: Customer-managed KMS key ARN from the Infrastructure Stack; encrypts GatewayClientSecret
+
+Resources:
+  # ============================================================================
+  # Cognito Resources for Gateway Authentication
+  # ============================================================================
+
+  GatewayUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AWS::StackName}-gateway-pool
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      AutoVerifiedAttributes:
+        - email
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Required: true
+          Mutable: false
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+      UserPoolTags:
+        Project: !Ref ProjectName
+        Environment: !Ref Environment
+
+  GatewayUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Sub ${ParentStackName}-gateway
+      UserPoolId: !Ref GatewayUserPool
+
+  # Resource server identifier MUST match the Gateway identifier for OAuth to work
+  # We use a derived name based on the parent stack name
+  GatewayUserPoolResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      UserPoolId: !Ref GatewayUserPool
+      Identifier: !Sub ${AWS::StackName}-gateway
+      Name: !Sub ${AWS::StackName}-gateway-resource-server
+      Scopes:
+        - ScopeName: invoke
+          ScopeDescription: Invoke gateway
+
+  GatewayUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    DependsOn: GatewayUserPoolResourceServer
+    Properties:
+      ClientName: !Sub ${AWS::StackName}-gateway-client
+      UserPoolId: !Ref GatewayUserPool
+      GenerateSecret: true
+      AllowedOAuthFlows:
+        - client_credentials
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - !Sub ${AWS::StackName}-gateway/invoke
+      ExplicitAuthFlows:
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  # ============================================================================
+  # Gateway client secret for the AgentCore Runtime
+  # ============================================================================
+
+  # The Runtime's copy of the client secret. It reaches the Runtime only as this secret's ARN, and the Runtime
+  # reads the value when its Gateway client starts (backend/runtime/utils/mcp_client.py). The secret is created
+  # empty; GatewayClientSecretCopy writes the value. Rotation: architecture/45-credential-rotation-runbook.md.
+  # Retained like APIKeysSecret: a removal or replacement would otherwise delete it at once, with no recovery window,
+  # and leave the Runtime without its Gateway credential until the client secret is copied again.
+  GatewayClientSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV2_AWS_57
+            comment: "D8: rotated by hand with the Cognito two-secret procedure in architecture/45-credential-rotation-runbook.md; a Secrets Manager rotation schedule cannot add or delete the app client's secrets."
+      guard:
+        # SECRETSMANAGER_ROTATION_ENABLED_CHECK: rotated by hand (D8); see the Checkov comment above.
+        SuppressedRules:
+          - SECRETSMANAGER_ROTATION_ENABLED_CHECK
+    Properties:
+      Description: !Sub Gateway Cognito app client secret that the ${ParentStackName} AgentCore Runtime reads by ARN
+      KmsKeyId: !Ref StackEncryptionKeyArn
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # The copy function may describe app clients of this stack's gateway user pool and write only
+  # GatewayClientSecret, with the stack key through Secrets Manager. The grant lives here, beside the pool,
+  # because the role's own stack is created before the pool exists.
+  GatewayClientSecretReadPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CopyGatewayClientSecret
+      Roles: [!Select [1, !Split ["/", !Ref CustomResourceLambdaRoleArn]]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: cognito-idp:DescribeUserPoolClient
+            Resource: !GetAtt GatewayUserPool.Arn
+          - Effect: Allow
+            Action: secretsmanager:PutSecretValue
+            Resource: !Ref GatewayClientSecret
+          - Effect: Allow
+            Action:
+              - kms:GenerateDataKey
+              - kms:Decrypt
+            Resource: !Ref StackEncryptionKeyArn
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com
+
+  # Copies the app client's secret into GatewayClientSecret. CloudFormation runs it only when it is created or
+  # its properties change, never on an ordinary deployment, so a value rotated with the runbook stays in place;
+  # changing these properties copies the client's secret again. It replaces CognitoClientSecretRetriever, which
+  # returned the secret to the stack, under a new logical ID: CloudFormation removes the old resource only after
+  # the update succeeds, so a failed update rolls back to it unchanged.
+  GatewayClientSecretCopy:
+    Type: Custom::GatewayClientSecretCopy
+    # The Refs order it after the client and the secret; the grant has no Ref, so name it here.
+    DependsOn: GatewayClientSecretReadPolicy
+    Properties:
+      ServiceToken: !Ref GetCognitoClientSecretFunctionArn
+      ServiceTimeout: 180
+      UserPoolId: !Ref GatewayUserPool
+      ClientId: !Ref GatewayUserPoolClient
+      SecretArn: !Ref GatewayClientSecret
+
+Outputs:
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !Ref GatewayUserPool
+
+  CognitoClientId:
+    Description: Cognito App Client ID
+    Value: !Ref GatewayUserPoolClient
+
+  CognitoDomain:
+    Description: Cognito Domain
+    Value: !Sub ${GatewayUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+
+  CognitoTokenEndpoint:
+    Description: Cognito Token Endpoint
+    Value: !Sub https://${GatewayUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com/oauth2/token
+
+  # Only the secret's ARN leaves this stack; no output carries the client secret itself.
+  GatewayClientSecretArn:
+    Description: ARN of the Secrets Manager secret holding the Runtime's copy of the gateway client secret
+    Value: !Ref GatewayClientSecret
+
+  # Output the scope string for use in OAuth requests
+  ScopeString:
+    Description: OAuth scope string for Gateway authentication
+    Value: !Sub ${AWS::StackName}-gateway/invoke

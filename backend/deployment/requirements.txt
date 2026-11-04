@@ -1,0 +1,13 @@
+# Backend deployment helper requirements
+#
+# Installed into the development environment through the root requirements.txt;
+# no release image installs this file (backend/runtime/requirements.txt is baked
+# into the runtime container). The deployer uses boto3. The development
+# environment also generates runtime schemas and reads YAML/env configuration.
+# Every pin equals requirements-lock.txt.
+boto3==1.43.97
+python-dotenv==1.2.2
+PyYAML==6.0.3
+
+# Schema generation (the Runtime Dockerfile's models stage installs the same pin by name).
+datamodel-code-generator==0.82.0

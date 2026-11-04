@@ -1,0 +1,64 @@
+/* MetadataDisplay.css - Metadata display for weather, citations, etc. */
+
+.metadata-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 12px;
+}
+
+.metadata-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.metadata-icon {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.metadata-value {
+  color: #cbd5e1;
+}
+
+/* Variant: Compact - single line, smaller */
+.metadata-display.compact {
+  padding: 8px 10px;
+  gap: 6px 12px;
+  margin-bottom: 8px;
+}
+
+.metadata-display.compact .metadata-item {
+  font-size: 0.8rem;
+}
+
+.metadata-display.compact .metadata-icon {
+  font-size: 0.85rem;
+}
+
+/* Variant: Detailed - vertical stack */
+.metadata-display.detailed {
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+}
+
+.metadata-display.detailed .metadata-item {
+  font-size: 0.9rem;
+}
+
+.metadata-display.detailed .metadata-value {
+  color: #e2e8f0;
+}
+
+/* Hover effect on items */
+.metadata-item:hover .metadata-value {
+  color: #f1f5f9;
+}

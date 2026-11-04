@@ -1,0 +1,3 @@
+# Local development only: prebuilt SUMO/netconvert binaries matching the container's
+# source build version. Never installed in images (they use /opt/sumo).
+eclipse-sumo==1.27.1

@@ -1,0 +1,384 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Wildfire Backend - Lambda Functions Stack (Gateway + Custom Resources)
+
+Parameters:
+  DtnOperationTimeoutSeconds:
+    Type: Number
+  DtnRequestTimeoutSeconds:
+    Type: Number
+  DtnMaxAttempts:
+    Type: Number
+  DtnSerializationReserveSeconds:
+    Type: Number
+  AssetPrefix:
+    Type: String
+    Default: assets
+  SimulationInternalUrl:
+    Type: String
+    Default: ""
+  SimulationAdapterSecurityGroupId:
+    Type: String
+    Default: ""
+  SimulationAdapterSubnetIds:
+    Type: String
+    Default: ""
+  GeocodeServiceS3Version:
+    Type: String
+  WildfireServiceS3Version:
+    Type: String
+  SimulationServiceS3Version:
+    Type: String
+    Default: ""
+  Environment:
+    Type: String
+    Description: Environment name
+
+  ParentStackName:
+    Type: String
+    Description: Name of the parent CloudFormation stack (used for resource naming)
+
+  ProjectName:
+    Type: String
+    Description: Project name for tagging
+
+  LambdaCodeBucket:
+    Type: String
+    Description: S3 bucket containing Lambda deployment packages (REQUIRED - must contain all Lambda .zip files)
+
+  LambdaExecutionRoleArn:
+    Type: String
+    Description: Lambda Execution Role ARN from Infrastructure Stack
+
+  CustomResourceLambdaRoleArn:
+    Type: String
+    Description: Custom Resource Lambda Role ARN from Infrastructure Stack
+
+  APIKeysSecretArn:
+    Type: String
+    Description: Secrets Manager ARN for API keys
+
+  # AWS-recommended approach: Use S3ObjectVersion to trigger Lambda code updates
+  # See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-lambda-function-code.html
+  WeatherDTNServiceS3Version:
+    Type: String
+    Description: S3 object version ID for weather-dtn-service Lambda package
+
+Conditions:
+  SimulationEnabled: !Not [!Equals [!Ref SimulationInternalUrl, ""]]
+
+Resources:
+  GeocodeServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ForwardGeocodingOnly
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: geo-places:Geocode
+                Resource: !Sub arn:${AWS::Partition}:geo-places:${AWS::Region}::provider/default
+  WildfireServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+  # Each function's Checkov skips carry its accepted risk for scanners that do not read the written
+  # dispositions. D9: Gateway targets are invoked synchronously and the custom resource only by CloudFormation,
+  # so no failure needs a dead-letter queue, and only the simulation adapter reaches a VPC resource. D53: no
+  # function environment holds a credential (the DTN function reads its secret by ARN), and the environment
+  # variables use Lambda's default encryption with an AWS managed key. Metadata changes do not update the functions.
+  # Each changeable function logs to a log group this stack owns, whose events expire after 30 days (D53). No
+  # LogGroupName, so no name collides with the function's old default group, which the deployer gives the same
+  # retention. Retain, like every stateful type: a function removed later leaves its group, empty 30 days later.
+  # GetCognitoClientSecretFunction keeps its default group: it must not change (owner brief Part 2).
+  GeocodeServiceLogs:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_158
+            comment: "G41: CloudWatch Logs encrypts these at rest; like every installation log group they keep AWS-managed encryption."
+          - id: CKV_AWS_338
+            comment: "D53: 30 days, the retention of every installation log group."
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: "G41: CloudWatch Logs encrypts these at rest; like every installation log group they keep AWS-managed encryption."
+      guard:
+        # CLOUDWATCH_LOG_GROUP_ENCRYPTED: G41, as for CKV_AWS_158 above.
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
+    Properties:
+      # Fixed (D37, D53): deployment/retention.py LOG_RETENTION_DAYS, the CDK app's logs.RetentionDays.ONE_MONTH.
+      RetentionInDays: 30
+  GeocodeServiceFunction:
+    Type: AWS::Lambda::Function
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_116
+            comment: "D9: geocode Gateway target; AgentCore Gateway invokes it synchronously and returns any error to the calling agent, and a dead-letter queue applies only to asynchronous invocations."
+          - id: CKV_AWS_117
+            comment: "D9: calls only the Amazon Location Places API and reaches no VPC resource, so a VPC attachment would not reduce its exposure."
+    Properties:
+      FunctionName: !Sub ${ParentStackName}-geocode-service
+      Runtime: python3.14
+      Handler: handler.handler
+      Role: !GetAtt GeocodeServiceRole.Arn
+      Timeout: 25
+      MemorySize: 256
+      ReservedConcurrentExecutions: 4
+      LoggingConfig:
+        LogGroup: !Ref GeocodeServiceLogs
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Sub ${AssetPrefix}/lambda-packages/geocode-service-${Environment}.zip
+        S3ObjectVersion: !Ref GeocodeServiceS3Version
+  WildfireServiceLogs:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_158
+            comment: "G41: CloudWatch Logs encrypts these at rest; like every installation log group they keep AWS-managed encryption."
+          - id: CKV_AWS_338
+            comment: "D53: 30 days, the retention of every installation log group."
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: "G41: CloudWatch Logs encrypts these at rest; like every installation log group they keep AWS-managed encryption."
+      guard:
+        # CLOUDWATCH_LOG_GROUP_ENCRYPTED: G41, as for CKV_AWS_158 above.
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
+    Properties:
+      RetentionInDays: 30
+  WildfireServiceFunction:
+    Type: AWS::Lambda::Function
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_116
+            comment: "D9: wildfire Gateway target; AgentCore Gateway invokes it synchronously and returns any error to the calling agent, and a dead-letter queue applies only to asynchronous invocations."
+          - id: CKV_AWS_117
+            comment: "D9: calls only the public ArcGIS wildfire feed over HTTPS and reaches no VPC resource, so a VPC attachment would not reduce its exposure."
+    Properties:
+      FunctionName: !Sub ${ParentStackName}-wildfire-service
+      Runtime: python3.14
+      Handler: handler.handler
+      Role: !GetAtt WildfireServiceRole.Arn
+      Timeout: 25
+      MemorySize: 256
+      ReservedConcurrentExecutions: 4
+      LoggingConfig:
+        LogGroup: !Ref WildfireServiceLogs
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Sub ${AssetPrefix}/lambda-packages/wildfire-service-${Environment}.zip
+        S3ObjectVersion: !Ref WildfireServiceS3Version
+  SimulationAdapterRole:
+    Type: AWS::IAM::Role
+    Condition: SimulationEnabled
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: {Service: lambda.amazonaws.com}
+            Action: sts:AssumeRole
+      # No signing-secret grant: the adapter forwards the signed context unchanged and the workspace API
+      # verifies it, so this role cannot read the key or mint a context (G17).
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+  SimulationServiceLogs:
+    Type: AWS::Logs::LogGroup
+    Condition: SimulationEnabled
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_158
+            comment: "G41: CloudWatch Logs encrypts these at rest; like every installation log group they keep AWS-managed encryption."
+          - id: CKV_AWS_338
+            comment: "D53: 30 days, the retention of every installation log group."
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: "G41: CloudWatch Logs encrypts these at rest; like every installation log group they keep AWS-managed encryption."
+      guard:
+        # CLOUDWATCH_LOG_GROUP_ENCRYPTED: G41, as for CKV_AWS_158 above.
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
+    Properties:
+      RetentionInDays: 30
+  SimulationServiceFunction:
+    Type: AWS::Lambda::Function
+    Condition: SimulationEnabled
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_116
+            comment: "D9: simulation Gateway target; AgentCore Gateway invokes it synchronously and returns any error to the calling agent, and a dead-letter queue applies only to asynchronous invocations."
+          - id: CKV_AWS_173
+            comment: "D53: the environment holds only the private simulator URL, no credential, and Lambda encrypts environment variables at rest with its AWS managed key."
+    Properties:
+      Runtime: python3.14
+      Handler: handler.handler
+      Role: !GetAtt SimulationAdapterRole.Arn
+      Timeout: 60
+      MemorySize: 256
+      ReservedConcurrentExecutions: 4
+      LoggingConfig:
+        LogGroup: !Ref SimulationServiceLogs
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Sub ${AssetPrefix}/lambda-packages/simulation-service-${Environment}.zip
+        S3ObjectVersion: !Ref SimulationServiceS3Version
+      VpcConfig:
+        SecurityGroupIds: [!Ref SimulationAdapterSecurityGroupId]
+        SubnetIds: !Split [",", !Ref SimulationAdapterSubnetIds]
+      Environment:
+        Variables:
+          SIMULATION_INTERNAL_URL: !Ref SimulationInternalUrl
+
+  # ============================================================================
+  # Custom Resource Lambda Functions
+  # ============================================================================
+
+  # The only custom-resource function: 3-cognito-auth.yaml GatewayClientSecretCopy calls it to copy the gateway
+  # client secret into Secrets Manager.
+  GetCognitoClientSecretFunction:
+    Type: AWS::Lambda::Function
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_116
+            comment: "D9: deploy-time custom-resource handler; CloudFormation invokes it only during stack operations and fails the operation when it fails or does not respond, so no failure needs a dead-letter queue."
+          - id: CKV_AWS_117
+            comment: "D9: calls only the Cognito and Secrets Manager APIs and reaches no VPC resource, so a VPC attachment would not reduce its exposure."
+    Properties:
+      FunctionName: !Sub ${ParentStackName}-GetCognitoSecret
+      Runtime: python3.14
+      Handler: get_cognito_client_secret.handler
+      Role: !Ref CustomResourceLambdaRoleArn
+      Timeout: 180
+      ReservedConcurrentExecutions: 10
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Sub ${AssetPrefix}/lambda-packages/get-cognito-client-secret-${Environment}.zip
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Purpose
+          Value: CustomResource
+
+  # ============================================================================
+  # Gateway Lambda Functions
+  # ============================================================================
+
+  WeatherDTNServiceLogs:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_158
+            comment: "G41: CloudWatch Logs encrypts these at rest; like every installation log group they keep AWS-managed encryption."
+          - id: CKV_AWS_338
+            comment: "D53: 30 days, the retention of every installation log group."
+      cfn_nag:
+        rules_to_suppress:
+          - id: W84
+            reason: "G41: CloudWatch Logs encrypts these at rest; like every installation log group they keep AWS-managed encryption."
+      guard:
+        # CLOUDWATCH_LOG_GROUP_ENCRYPTED: G41, as for CKV_AWS_158 above.
+        SuppressedRules:
+          - CLOUDWATCH_LOG_GROUP_ENCRYPTED
+    Properties:
+      RetentionInDays: 30
+  WeatherDTNServiceFunction:
+    Type: AWS::Lambda::Function
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_116
+            comment: "D9: DTN weather Gateway target; AgentCore Gateway invokes it synchronously and returns any error to the calling agent, and a dead-letter queue applies only to asynchronous invocations."
+          - id: CKV_AWS_117
+            comment: "D9: calls only the DTN API over HTTPS and reaches no VPC resource, so a VPC attachment would not reduce its exposure."
+          - id: CKV_AWS_173
+            comment: "D53: the environment holds settings and the DTN credentials secret's ARN, no credential; Lambda encrypts it at rest with its AWS managed key."
+    Properties:
+      FunctionName: !Sub ${ParentStackName}-weather-dtn-service
+      Description: DTN Weather service with forecasts
+      Runtime: python3.14
+      Handler: lambda_weather_dtn.lambda_handler
+      Role: !Ref LambdaExecutionRoleArn
+      Timeout: 300
+      MemorySize: 256
+      ReservedConcurrentExecutions: 10
+      TracingConfig:
+        Mode: Active
+      LoggingConfig:
+        LogGroup: !Ref WeatherDTNServiceLogs
+      Code:
+        S3Bucket: !Ref LambdaCodeBucket
+        S3Key: !Sub ${AssetPrefix}/lambda-packages/weather-dtn-service-${Environment}.zip
+        S3ObjectVersion: !Ref WeatherDTNServiceS3Version
+      Environment:
+        Variables:
+          DTN_OPERATION_TIMEOUT_SECONDS: !Ref DtnOperationTimeoutSeconds
+          DTN_REQUEST_TIMEOUT_SECONDS: !Ref DtnRequestTimeoutSeconds
+          DTN_MAX_ATTEMPTS: !Ref DtnMaxAttempts
+          DTN_SERIALIZATION_RESERVE_SECONDS: !Ref DtnSerializationReserveSeconds
+          ENVIRONMENT: !Ref Environment
+          # The function reads DTN_CLIENT_ID and DTN_CLIENT_SECRET from this secret at run time (D53).
+          DTN_CREDENTIALS_SECRET_ARN: !Ref APIKeysSecretArn
+          LOG_LEVEL: INFO
+          POWERTOOLS_SERVICE_NAME: weather-dtn-service
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Service
+          Value: WeatherDTN
+
+Outputs:
+  GeocodeServiceArn:
+    Value: !GetAtt GeocodeServiceFunction.Arn
+  WildfireServiceArn:
+    Value: !GetAtt WildfireServiceFunction.Arn
+  SimulationServiceArn:
+    Value: !If [SimulationEnabled, !GetAtt SimulationServiceFunction.Arn, ""]
+  # Custom Resource Lambda Functions
+  GetCognitoClientSecretFunctionArn:
+    Description: Get Cognito Client Secret Lambda ARN
+    Value: !GetAtt GetCognitoClientSecretFunction.Arn
+
+  # Gateway Lambda Functions
+  WeatherDTNServiceArn:
+    Description: Weather DTN Service Lambda ARN
+    Value: !GetAtt WeatherDTNServiceFunction.Arn

@@ -1,0 +1,274 @@
+/**
+ * CameraFeedModal Content Styles
+ * Content-specific styles only — backdrop, container, header, and close button
+ * are now handled by the ModalPanel primitive.
+ */
+
+/* Meta info (device/sensor) */
+.camera-feed-modal__meta {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.camera-feed-modal__caption {
+  margin: 4px 0 0;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+/* Content */
+.camera-feed-modal__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f8fafc;
+}
+
+.camera-feed-modal__image-container {
+  background: #1f2937;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+/* Image Viewer States */
+.camera-image-viewer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-image-viewer__canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+.camera-image-viewer--loading,
+.camera-image-viewer--error,
+.camera-image-viewer--empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: #9ca3af;
+}
+
+.camera-image-viewer__spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.camera-image-viewer__spinner .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #374151;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.camera-image-viewer__error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.camera-image-viewer__error .error-icon {
+  font-size: 32px;
+}
+
+.camera-image-viewer__error .error-message {
+  color: #fca5a5;
+}
+
+.camera-image-viewer__placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.camera-image-viewer__placeholder .placeholder-icon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+/* Detection Info */
+.camera-feed-modal__info {
+  margin-top: 20px;
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+.camera-feed-modal__timestamp {
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 16px;
+}
+
+.camera-feed-modal__probabilities {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.camera-feed-modal__probability {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px;
+  border-radius: 8px;
+  background: #f3f4f6;
+}
+
+.camera-feed-modal__probability .probability-label {
+  font-size: 14px;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+
+.camera-feed-modal__probability .probability-value {
+  font-size: 24px;
+  font-weight: 700;
+}
+
+/* Confidence color classes */
+.confidence--high {
+  background: #fef2f2 !important;
+}
+
+.confidence--high .probability-value {
+  color: #dc2626;
+}
+
+.confidence--medium {
+  background: #fff7ed !important;
+}
+
+.confidence--medium .probability-value {
+  color: #ea580c;
+}
+
+.confidence--low {
+  background: #fefce8 !important;
+}
+
+.confidence--low .probability-value {
+  color: #ca8a04;
+}
+
+.confidence--none .probability-value {
+  color: #6b7280;
+}
+
+/* Detection List */
+.camera-feed-modal__detections {
+  font-size: 14px;
+}
+
+.camera-feed-modal__detections strong {
+  color: #374151;
+}
+
+.detection-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.detection-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.detection-class {
+  text-transform: capitalize;
+  font-weight: 500;
+  color: #374151;
+}
+
+.detection-confidence {
+  color: #6b7280;
+}
+
+/* Footer */
+.camera-feed-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+}
+
+.camera-feed-modal__refresh,
+.camera-feed-modal__close-btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.camera-feed-modal__refresh {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.camera-feed-modal__refresh:hover:not(:disabled) {
+  background: #dbeafe;
+}
+
+.camera-feed-modal__refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.camera-feed-modal__close-btn {
+  background: #1e40af;
+  border: none;
+  color: white;
+}
+
+.camera-feed-modal__close-btn:hover {
+  background: #1d4ed8;
+}
+
+/* Responsive — positioning/backdrop handled by ModalPanel primitive */
+@media (max-width: 640px) {
+  .camera-feed-modal__meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .camera-feed-modal__content {
+    padding: 16px;
+  }
+
+  .camera-feed-modal__probabilities {
+    flex-direction: column;
+  }
+}

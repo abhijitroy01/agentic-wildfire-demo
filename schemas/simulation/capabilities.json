@@ -1,0 +1,373 @@
+{
+  "api_version": "1",
+  "artifact_versions_readable": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "capability_version": "1.0.0",
+  "cross_field_constraints": [
+    "departure_minutes <= duration_minutes",
+    "hazard_radius_m + hazard_growth_m_min * duration_minutes <= radius_km * 900",
+    "policies are unique",
+    "Source locations, selected-road eligibility and network gates require runtime checks.",
+    "Synthetic traffic uses explicit demand assumptions; optional provider traffic requires coverage."
+  ],
+  "operations": [
+    {
+      "effect": "read",
+      "enabled": true,
+      "id": "run_status",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": null,
+      "required_evidence": [],
+      "required_job_states": [],
+      "suggested_question": null,
+      "supported_time_scopes": [],
+      "tool": "get_simulation_status"
+    },
+    {
+      "effect": "read",
+      "enabled": true,
+      "id": "scenario_assumptions",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": null,
+      "required_evidence": [],
+      "required_job_states": [
+        "completed"
+      ],
+      "suggested_question": "What assumptions does this simulation use?",
+      "supported_time_scopes": [
+        "final"
+      ],
+      "tool": "get_simulation_evidence"
+    },
+    {
+      "effect": "read",
+      "enabled": true,
+      "id": "source_evidence",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": null,
+      "required_evidence": [],
+      "required_job_states": [
+        "completed"
+      ],
+      "suggested_question": "Which observations actually affected the simulation?",
+      "supported_time_scopes": [
+        "final"
+      ],
+      "tool": "get_simulation_evidence"
+    },
+    {
+      "effect": "read",
+      "enabled": true,
+      "id": "compare_outcomes",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": null,
+      "required_evidence": [
+        "valid_accounting",
+        "valid_engine_run",
+        "complete_horizon"
+      ],
+      "required_job_states": [
+        "completed"
+      ],
+      "suggested_question": "Compare resident evacuation and crew access across the policies.",
+      "supported_time_scopes": [
+        "final"
+      ],
+      "tool": "get_simulation_evidence"
+    },
+    {
+      "effect": "read",
+      "enabled": true,
+      "id": "crew_details",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": null,
+      "required_evidence": [
+        "complete_crew_timeline"
+      ],
+      "required_job_states": [
+        "completed"
+      ],
+      "suggested_question": "Which crews did not reach staging, and how did waiting and travel times change?",
+      "supported_time_scopes": [
+        "final"
+      ],
+      "tool": "get_simulation_evidence"
+    },
+    {
+      "effect": "read",
+      "enabled": true,
+      "id": "inspect_replay",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": null,
+      "required_evidence": [
+        "conserved_replay_ledger"
+      ],
+      "required_job_states": [
+        "completed"
+      ],
+      "suggested_question": "How many people are still waiting or unresolved at this time?",
+      "supported_time_scopes": [
+        "replay"
+      ],
+      "tool": "get_simulation_evidence"
+    },
+    {
+      "effect": "create_run",
+      "enabled": true,
+      "id": "variant_departure_window",
+      "parameter": "departure_minutes",
+      "parameter_schema": {
+        "anyOf": [
+          {
+            "maximum": 45,
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Departure Minutes"
+      },
+      "reason_code": null,
+      "required_evidence": [],
+      "required_job_states": [],
+      "suggested_question": "What if departure were spread over 20 minutes?",
+      "supported_time_scopes": [],
+      "tool": null
+    },
+    {
+      "effect": "create_run",
+      "enabled": true,
+      "id": "variant_vehicle_count",
+      "parameter": "vehicles",
+      "parameter_schema": {
+        "anyOf": [
+          {
+            "maximum": 1500,
+            "minimum": 20,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Vehicles"
+      },
+      "reason_code": null,
+      "required_evidence": [],
+      "required_job_states": [],
+      "suggested_question": "Prepare a comparison with 600 vehicles.",
+      "supported_time_scopes": [],
+      "tool": null
+    },
+    {
+      "effect": "cancel",
+      "enabled": true,
+      "id": "cancel_run",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": null,
+      "required_evidence": [],
+      "required_job_states": [
+        "queued",
+        "running"
+      ],
+      "suggested_question": null,
+      "supported_time_scopes": [],
+      "tool": null
+    },
+    {
+      "effect": "create_run",
+      "enabled": false,
+      "id": "wind_driven_spread",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": "SIMULATOR_CONTROL_NOT_IMPLEMENTED",
+      "required_evidence": [],
+      "required_job_states": [],
+      "suggested_question": null,
+      "supported_time_scopes": [],
+      "tool": null
+    },
+    {
+      "effect": "create_run",
+      "enabled": false,
+      "id": "scheduled_road_closure",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": "SIMULATOR_CONTROL_NOT_IMPLEMENTED",
+      "required_evidence": [],
+      "required_job_states": [],
+      "suggested_question": null,
+      "supported_time_scopes": [],
+      "tool": null
+    },
+    {
+      "effect": "create_run",
+      "enabled": false,
+      "id": "contraflow",
+      "parameter": null,
+      "parameter_schema": null,
+      "reason_code": "SIMULATOR_CONTROL_NOT_IMPLEMENTED",
+      "required_evidence": [],
+      "required_job_states": [],
+      "suggested_question": null,
+      "supported_time_scopes": [],
+      "tool": null
+    }
+  ],
+  "scenario_schema": {
+    "additionalProperties": false,
+    "description": "The integration boundary requires explicit geographic/profile choices.",
+    "properties": {
+      "background_speed_factor": {
+        "default": 1.0,
+        "maximum": 1.0,
+        "minimum": 0.3,
+        "title": "Background Speed Factor",
+        "type": "number"
+      },
+      "crews": {
+        "default": 4,
+        "maximum": 16,
+        "minimum": 0,
+        "title": "Crews",
+        "type": "integer"
+      },
+      "departure_minutes": {
+        "default": 10,
+        "maximum": 45,
+        "minimum": 1,
+        "title": "Departure Minutes",
+        "type": "integer"
+      },
+      "duration_minutes": {
+        "default": 30,
+        "maximum": 60,
+        "minimum": 5,
+        "title": "Duration Minutes",
+        "type": "integer"
+      },
+      "exit_direction": {
+        "enum": [
+          "south",
+          "north",
+          "east",
+          "west"
+        ],
+        "title": "Exit Direction",
+        "type": "string"
+      },
+      "hazard_growth_m_min": {
+        "default": 10,
+        "maximum": 100,
+        "minimum": 0,
+        "title": "Hazard Growth M Min",
+        "type": "number"
+      },
+      "hazard_radius_m": {
+        "default": 150,
+        "maximum": 3000,
+        "minimum": 0,
+        "title": "Hazard Radius M",
+        "type": "number"
+      },
+      "hazard_start_minutes": {
+        "default": 5,
+        "maximum": 45,
+        "minimum": 0,
+        "title": "Hazard Start Minutes",
+        "type": "integer"
+      },
+      "highway": {
+        "pattern": "^(?:(?:State|US|Interstate) [0-9]{1,3}|osm:(?:ref|name):[0-9a-f]{20}|osm:way:[0-9]+)$",
+        "title": "Highway",
+        "type": "string"
+      },
+      "lat": {
+        "maximum": 90,
+        "minimum": -90,
+        "title": "Lat",
+        "type": "number"
+      },
+      "lon": {
+        "maximum": 180,
+        "minimum": -180,
+        "title": "Lon",
+        "type": "number"
+      },
+      "people_per_vehicle": {
+        "default": 2,
+        "maximum": 8,
+        "minimum": 1,
+        "title": "People Per Vehicle",
+        "type": "integer"
+      },
+      "policies": {
+        "items": {
+          "enum": [
+            "baseline",
+            "coordinated",
+            "phased"
+          ],
+          "type": "string"
+        },
+        "maxItems": 3,
+        "minItems": 1,
+        "title": "Policies",
+        "type": "array"
+      },
+      "radius_km": {
+        "maximum": 15,
+        "minimum": 2,
+        "title": "Radius Km",
+        "type": "number"
+      },
+      "seed": {
+        "default": 42,
+        "maximum": 2147483647,
+        "minimum": 0,
+        "title": "Seed",
+        "type": "integer"
+      },
+      "traffic_mode": {
+        "default": "synthetic",
+        "enum": [
+          "synthetic",
+          "provider_speed_limits"
+        ],
+        "title": "Traffic Mode",
+        "type": "string"
+      },
+      "vehicles": {
+        "default": 400,
+        "maximum": 1500,
+        "minimum": 20,
+        "title": "Vehicles",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "lat",
+      "lon",
+      "radius_km",
+      "highway",
+      "exit_direction"
+    ],
+    "title": "SimulationScenario",
+    "type": "object"
+  }
+}

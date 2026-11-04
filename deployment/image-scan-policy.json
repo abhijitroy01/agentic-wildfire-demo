@@ -1,0 +1,42 @@
+{
+  "expires": "2026-12-14",
+  "owner": "FireGUard maintainers",
+  "review": "architecture/36-public-demo-security.md",
+  "exceptions": [
+    {
+      "components": [
+        "api",
+        "worker",
+        "firetruck",
+        "radio",
+        "runtime",
+        "fire-risk"
+      ],
+      "package": "zlib",
+      "version": "1.3.dfsg+really1.3.1-1",
+      "findings": [
+        "CVE-2026-85091"
+      ],
+      "severity": "HIGH",
+      "reason": "Reviewed application has no stalled nonblocking gzwrite followed by gzprintf/gzvprintf. Reassess changes to compression consumers; vendor patch remains required."
+    },
+    {
+      "components": [
+        "api",
+        "worker",
+        "firetruck",
+        "radio",
+        "runtime",
+        "fire-risk"
+      ],
+      "package": "glibc",
+      "version": "2.41-12+deb13u4",
+      "findings": [
+        "CVE-2026-5435",
+        "CVE-2026-19499"
+      ],
+      "severity": "HIGH",
+      "reason": "Debian trixie glibc; the Debian security tracker marks both no-dsa (Minor issue), fixed only in forky/sid 2.43-7. Affected functions are the deprecated DNS debug printers ns_printrr, ns_printrrf and fp_nquery, and strfmon/strfmon_l; git grep finds no call to them in the tracked project source. Temporary until a fixed trixie glibc ships, when this version no longer matches and the exception is dropped; vendor patch remains required."
+    }
+  ]
+}

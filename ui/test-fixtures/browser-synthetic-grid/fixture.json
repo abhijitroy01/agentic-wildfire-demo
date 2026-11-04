@@ -1,0 +1,6 @@
+{
+  "synthetic": true,
+  "label": "Synthetic 5x5 grid near Paradise, CA, seeded; not real roads, traffic or incidents",
+  "generator": "traffic-simulator/scripts/build_browser_fixture.py",
+  "seed": 42
+}

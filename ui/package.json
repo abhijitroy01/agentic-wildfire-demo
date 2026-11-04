@@ -1,0 +1,61 @@
+{
+  "name": "fireguard-ai",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "prebuild": "npm run generate:types",
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.node.json && vite build",
+    "preview": "vite preview",
+    "test:metrics": "node --test \"scripts/test/*.test.cjs\"",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "generate:types": "openapi-typescript ../schemas/api-schema.yaml --output src/schemas/generated/api-types.ts"
+  },
+  "dependencies": {
+    "@arcgis/core": "4.33.14",
+    "maplibre-gl": "6.10.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@eslint/compat": "2.1.1",
+    "@eslint/js": "10.0.1",
+    "@types/node": "22.20.5",
+    "@types/react": "18.3.27",
+    "@types/react-dom": "18.3.7",
+    "@typescript-eslint/eslint-plugin": "8.71.2",
+    "@typescript-eslint/parser": "8.71.2",
+    "@vitejs/plugin-react": "4.7.0",
+    "eslint": "10.12.0",
+    "eslint-import-resolver-typescript": "4.4.5",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "globals": "17.13.0",
+    "openapi-typescript": "7.13.0",
+    "playwright": "1.64.0",
+    "react-test-renderer": "18.3.1",
+    "typescript": "5.9.3",
+    "vite": "6.4.4",
+    "vite-tsconfig-paths": "4.3.2"
+  },
+  "overrides": {
+    "esbuild": "0.25.12",
+    "undici": "6.29.0",
+    "eslint-plugin-import": {
+      "eslint": "$eslint"
+    },
+    "eslint-plugin-jsx-a11y": {
+      "eslint": "$eslint"
+    },
+    "eslint-plugin-react": {
+      "eslint": "$eslint"
+    }
+  }
+}

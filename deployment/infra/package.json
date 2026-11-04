@@ -1,0 +1,21 @@
+{
+  "name": "fireguard-workspace-infrastructure",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc --noEmit",
+    "synth": "LAB_SYNTH_OFFLINE=1 cdk synth '*' --no-lookups --quiet",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "2.273.0",
+    "constructs": "10.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.3",
+    "aws-cdk": "2.1141.0",
+    "cdk-nag": "2.38.2",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3"
+  }
+}

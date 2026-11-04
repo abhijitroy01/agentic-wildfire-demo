@@ -1,0 +1,20 @@
+# Exact pins equal to requirements-lock.txt; the radio image installs with
+# --constraint requirements-lock.txt (deployment.check_lockfiles verifies both).
+
+# Core AWS SDK
+boto3==1.43.97
+
+# HTTP client
+requests==2.34.2
+
+# Amazon Transcribe streaming
+amazon-transcribe==0.6.4
+
+# Environment variable management
+python-dotenv==1.2.2
+
+# FastAPI server (for UI integration)
+fastapi==0.141.1
+uvicorn[standard]==0.53.0
+websockets==16.1.1
+pydantic==2.13.5

@@ -1,0 +1,11 @@
+# Build context is the repository root; include the service tests inspected by the release gate.
+*
+!deployment/infra/
+!schemas/simulation/capabilities.json
+!deployment/change_sets.py
+!traffic-simulator/traffic_simulator/*.py
+!firetruck-simulator/tests/
+!broadcastify/monitor/test_private.py
+!broadcastify/monitor/test_radio_pipeline.py
+**/node_modules
+**/cdk.out

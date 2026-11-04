@@ -1,0 +1,208 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Wildfire Backend - Bedrock Guardrails Stack (Native AWS Resource)
+
+# ============================================================================
+# NATIVE AWS::Bedrock::Guardrail RESOURCE
+#
+# This template uses the native CloudFormation resource type for Bedrock
+# Guardrails. CloudFormation manages the full lifecycle:
+# - CREATE: Creates new guardrail with stack-scoped name
+# - UPDATE: Updates guardrail configuration in place
+# - DELETE: Removes guardrail when stack is deleted
+#
+# Every agent model uses the published version (WildfireGuardrailVersion), never
+# the mutable DRAFT. A deploy that changes the guardrail publishes a new version
+# and hands its number to the runtime as DEPLOYED_GuardrailVersion.
+#
+# Stack-scoped naming prevents conflicts across:
+# - Multiple projects in same account
+# - Multiple environments (dev/staging/prod)
+# - Multiple regions
+# ============================================================================
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - development
+      - staging
+      - production
+
+  ProjectName:
+    Type: String
+    Description: Project name for tagging
+    Default: WildfireDataFabric
+
+Resources:
+  # ============================================================================
+  # Bedrock Guardrail for every agent model (supervisor, specialists, simulation, report)
+  # ============================================================================
+
+  WildfireGuardrail:
+    Type: AWS::Bedrock::Guardrail
+    Properties:
+      # Short name to stay under 50 char limit (Bedrock guardrail name constraint)
+      # Format: wfm-guardrail-{env} (max ~25 chars)
+      Name: !Sub ${ProjectName}-${Environment}
+      Description: Safety guardrails for wildfire management supervisor agent - blocks off-topic queries and harmful content
+
+      # Messages shown when guardrail blocks content
+      BlockedInputMessaging: "I can only assist with wildfire detection, weather monitoring, and emergency response. Please ask a relevant question."
+      BlockedOutputsMessaging: "I cannot provide that information. Please ask about wildfire status, weather conditions, or emergency procedures."
+
+      # Content Filters - Detect harmful content and prompt attacks
+      ContentPolicyConfig:
+        FiltersConfig:
+          # CRITICAL: Prompt attack detection (jailbreaks, role-playing, injection)
+          # Note: PROMPT_ATTACK only evaluates inputs - OutputStrength set to NONE as it doesn't apply to outputs
+          - Type: PROMPT_ATTACK
+            InputStrength: HIGH
+            OutputStrength: NONE
+
+          # Harmful content filters
+          - Type: HATE
+            InputStrength: HIGH
+            OutputStrength: MEDIUM
+
+          - Type: SEXUAL
+            InputStrength: HIGH
+            OutputStrength: HIGH
+
+          - Type: VIOLENCE
+            InputStrength: MEDIUM
+            OutputStrength: MEDIUM
+
+          - Type: INSULTS
+            InputStrength: MEDIUM
+            OutputStrength: MEDIUM
+
+          - Type: MISCONDUCT
+            InputStrength: MEDIUM
+            OutputStrength: MEDIUM
+
+      # Denied Topics - Block off-topic queries
+      TopicPolicyConfig:
+        TopicsConfig:
+          # General knowledge and history
+          - Name: general-knowledge-history
+            Definition: "General knowledge questions, historical facts, educational content, trivia, or academic information unrelated to wildfire management, weather science, or emergency response procedures"
+            Examples:
+              - "When was independence day"
+              - "Who was the first president"
+              - "What is the capital of France"
+              - "Explain photosynthesis"
+            Type: DENY
+
+          # Entertainment requests
+          - Name: entertainment-requests
+            Definition: "Requests for jokes, stories, poems, creative writing, entertainment content, or casual conversation unrelated to emergency management"
+            Examples:
+              - "Tell me a joke"
+              - "Write me a poem"
+              - "Let's chat about movies"
+            Type: DENY
+
+          # Personal advice
+          - Name: personal-advice
+            Definition: "Personal advice, life coaching, relationship guidance, career counseling, or personal decision-making unrelated to emergency situations"
+            Examples:
+              - "Should I change careers"
+              - "What should I eat for dinner"
+              - "How do I make friends"
+            Type: DENY
+
+          # Financial advice
+          - Name: financial-advice
+            Definition: "Financial advice, investment recommendations, cryptocurrency discussions, stock market analysis, or monetary guidance"
+            Examples:
+              - "Should I invest in Bitcoin"
+              - "What stocks should I buy"
+              - "How to save money"
+            Type: DENY
+
+          # Shopping and recommendations
+          - Name: shopping-recommendations
+            Definition: "Product recommendations, shopping advice, restaurant suggestions, travel planning, or consumer guidance unrelated to emergency preparedness supplies"
+            Examples:
+              - "Best restaurants near me"
+              - "What laptop should I buy"
+              - "Recommend a vacation spot"
+            Type: DENY
+
+          # Technical support (non-system)
+          - Name: technical-support
+            Definition: "Technical support for software, devices, applications, or technology troubleshooting unrelated to the wildfire management system itself"
+            Examples:
+              - "How do I fix my printer"
+              - "My phone won't turn on"
+              - "Excel formula help"
+            Type: DENY
+
+      # Sensitive Information Filters - Protect PII
+      SensitiveInformationPolicyConfig:
+        PiiEntitiesConfig:
+          # Anonymize contact information
+          - Type: EMAIL
+            Action: ANONYMIZE
+
+          - Type: PHONE
+            Action: ANONYMIZE
+
+          # Note: ADDRESS filter removed - addresses are critical for wildfire location tracking
+
+          # Block sensitive identifiers
+          - Type: US_SOCIAL_SECURITY_NUMBER
+            Action: BLOCK
+
+          - Type: CREDIT_DEBIT_CARD_NUMBER
+            Action: BLOCK
+
+          - Type: US_PASSPORT_NUMBER
+            Action: BLOCK
+
+          - Type: DRIVER_ID
+            Action: ANONYMIZE
+
+      # Word Filters - Block profanity in emergency communications
+      WordPolicyConfig:
+        ManagedWordListsConfig:
+          - Type: PROFANITY
+
+      # Tags for resource management
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Purpose
+          Value: AI-Safety-Guardrails
+        - Key: StackName
+          Value: !Ref AWS::StackName
+
+  # Published, immutable snapshot of WildfireGuardrail. Both properties are create-only, and the
+  # Description carries the guardrail's UpdatedAt time, so a deploy that changes the guardrail
+  # replaces this resource: CloudFormation publishes a new version from the updated DRAFT first,
+  # the runtime switches to it, and the old version is deleted in cleanup.
+  WildfireGuardrailVersion:
+    Type: AWS::Bedrock::GuardrailVersion
+    Properties:
+      GuardrailIdentifier: !GetAtt WildfireGuardrail.GuardrailId
+      Description: !Sub "Published for every agent model from the guardrail configuration of ${WildfireGuardrail.UpdatedAt}"
+
+Outputs:
+  GuardrailId:
+    Description: Bedrock Guardrail ID that every agent model uses
+    Value: !GetAtt WildfireGuardrail.GuardrailId
+
+  GuardrailArn:
+    Description: Bedrock Guardrail ARN
+    Value: !GetAtt WildfireGuardrail.GuardrailArn
+
+  GuardrailVersion:
+    Description: Published Bedrock Guardrail version number (DEPLOYED_GuardrailVersion); never the mutable DRAFT
+    Value: !GetAtt WildfireGuardrailVersion.Version
+
+  GuardrailName:
+    Description: Bedrock Guardrail name
+    Value: !Sub wfm-guardrail-${Environment}

@@ -1,0 +1,200 @@
+/* AudioSection.css - Voice message/audio player styles */
+/* Recovered from pre-Vite migration (commit ab69aec^) and modernized */
+
+/* ========== Base Audio Item (Full Display) ========== */
+.audio-item {
+  padding: 14px;
+  background: linear-gradient(135deg, rgba(37, 37, 64, 0.5), rgba(32, 32, 54, 0.7));
+  border-radius: 10px;
+  border: 1px solid rgba(139, 92, 246, 0.15);
+  transition: all 0.3s ease;
+}
+
+.audio-item:hover {
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.audio-item.expired {
+  opacity: 0.6;
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
+/* Audio Header (clickable) */
+.audio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+}
+
+.audio-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.audio-language {
+  font-weight: 600;
+  color: #a78bfa;
+  font-size: 14px;
+}
+
+.audio-voice {
+  font-size: 12px;
+  color: #b0b0c0;
+}
+
+.audio-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.audio-expiry {
+  font-size: 11px;
+  color: #fbbf24;
+}
+
+.expand-icon {
+  font-size: 10px;
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+/* Audio Content (expanded) */
+.audio-content {
+  padding-top: 10px;
+  border-top: 1px solid rgba(139, 92, 246, 0.15);
+  margin-top: 8px;
+}
+
+/* Audio Player */
+.audio-player {
+  width: 100%;
+  height: 32px;
+  margin-top: 8px;
+  border-radius: 8px;
+}
+
+/* Audio Actions */
+.audio-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.copy-url-button {
+  padding: 6px 12px;
+  font-size: 12px;
+  background: rgba(139, 92, 246, 0.2);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  color: #a78bfa;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-url-button:hover {
+  background: rgba(139, 92, 246, 0.3);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* Technical Info */
+.audio-technical-info {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+}
+
+.audio-technical-info small {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.6;
+}
+
+/* Expired State */
+.audio-expired {
+  color: #ff6b6b;
+  font-size: 12px;
+  padding: 10px;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 6px;
+  text-align: center;
+  margin-top: 8px;
+}
+
+/* Warning Banners */
+.warning-banner {
+  padding: 10px 14px;
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px;
+  color: #fbbf24;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.warning-banner-compact {
+  padding: 8px 12px;
+  background: rgba(251, 191, 36, 0.1);
+  border-radius: 6px;
+  color: #fbbf24;
+  font-size: 11px;
+  margin-bottom: 10px;
+}
+
+/* ========== Compact Audio Item (in accordion) ========== */
+/* Using BEM modifier pattern: .audio-item.compact */
+
+.audio-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.audio-item.compact {
+  padding: 10px;
+  background: rgba(37, 37, 64, 0.4);
+  border-radius: 8px;
+  border-left: 3px solid #8b5cf6;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+}
+
+.audio-item.compact .audio-header {
+  padding-bottom: 0;
+}
+
+.audio-item.compact .audio-language {
+  font-size: 13px;
+}
+
+.audio-item.compact .audio-voice {
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.audio-player.compact {
+  width: 100%;
+  height: 28px;
+  margin-top: 4px;
+}
+
+/* ========== Full Section Display ========== */
+.audio-list-full {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.detail-section-full {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

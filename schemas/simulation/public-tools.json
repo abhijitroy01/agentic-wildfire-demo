@@ -1,0 +1,3267 @@
+{
+  "components": {
+    "schemas": {
+      "AgentActivity": {
+        "additionalProperties": false,
+        "properties": {
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Ended At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "started_at": {
+            "title": "Started At",
+            "type": "number"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "awaiting_result",
+              "result_received",
+              "unverified",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_call_id": {
+            "title": "Tool Call Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tool_call_id",
+          "name",
+          "status",
+          "started_at"
+        ],
+        "title": "AgentActivity",
+        "type": "object"
+      },
+      "ArtifactReference": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact": {
+            "const": "result",
+            "default": "result",
+            "title": "Artifact",
+            "type": "string"
+          },
+          "artifact_schema_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Schema Version"
+          },
+          "hash_encoding": {
+            "const": "canonical_json_v1",
+            "default": "canonical_json_v1",
+            "title": "Hash Encoding",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "sha256",
+          "artifact_schema_version"
+        ],
+        "title": "ArtifactReference",
+        "type": "object"
+      },
+      "AssumptionsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "run_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "view": {
+            "const": "assumptions",
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_ids",
+          "view"
+        ],
+        "title": "AssumptionsRequest",
+        "type": "object"
+      },
+      "CancelRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id"
+        ],
+        "title": "CancelRequest",
+        "type": "object"
+      },
+      "CapabilityOperation": {
+        "additionalProperties": false,
+        "properties": {
+          "effect": {
+            "enum": [
+              "read",
+              "create_run",
+              "cancel"
+            ],
+            "title": "Effect",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "parameter": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parameter"
+          },
+          "parameter_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parameter Schema"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reason Code"
+          },
+          "required_evidence": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Evidence",
+            "type": "array"
+          },
+          "required_job_states": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Job States",
+            "type": "array"
+          },
+          "suggested_question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Suggested Question"
+          },
+          "supported_time_scopes": {
+            "items": {
+              "enum": [
+                "final",
+                "replay"
+              ],
+              "type": "string"
+            },
+            "title": "Supported Time Scopes",
+            "type": "array"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tool"
+          }
+        },
+        "required": [
+          "id",
+          "enabled",
+          "effect",
+          "required_job_states"
+        ],
+        "title": "CapabilityOperation",
+        "type": "object"
+      },
+      "CapabilityRegistry": {
+        "additionalProperties": false,
+        "properties": {
+          "api_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Api Version",
+            "type": "string"
+          },
+          "artifact_versions_readable": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Artifact Versions Readable",
+            "type": "array"
+          },
+          "capability_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Capability Version",
+            "type": "string"
+          },
+          "cross_field_constraints": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Cross Field Constraints",
+            "type": "array"
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityOperation"
+            },
+            "title": "Operations",
+            "type": "array"
+          },
+          "scenario_schema": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Scenario Schema",
+            "type": "object"
+          }
+        },
+        "required": [
+          "artifact_versions_readable",
+          "operations",
+          "scenario_schema",
+          "cross_field_constraints"
+        ],
+        "title": "CapabilityRegistry",
+        "type": "object"
+      },
+      "ComparisonRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "policy_ids": {
+            "items": {
+              "enum": [
+                "baseline",
+                "coordinated",
+                "phased"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Policy Ids",
+            "type": "array"
+          },
+          "run_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "time_scope": {
+            "discriminator": {
+              "mapping": {
+                "final": "#/components/schemas/FinalSelection",
+                "replay": "#/components/schemas/ReplaySelection"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/FinalSelection"
+              },
+              {
+                "$ref": "#/components/schemas/ReplaySelection"
+              }
+            ],
+            "title": "Time Scope"
+          },
+          "view": {
+            "const": "comparison",
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_ids",
+          "view"
+        ],
+        "title": "ComparisonRequest",
+        "type": "object"
+      },
+      "CrewRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "crew_id": {
+            "anyOf": [
+              {
+                "pattern": "^crew-[0-9]{1,3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Crew Id"
+          },
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "policy_ids": {
+            "items": {
+              "enum": [
+                "baseline",
+                "coordinated",
+                "phased"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Policy Ids",
+            "type": "array"
+          },
+          "run_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "time_scope": {
+            "$ref": "#/components/schemas/FinalSelection"
+          },
+          "view": {
+            "const": "crew",
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_ids",
+          "view"
+        ],
+        "title": "CrewRequest",
+        "type": "object"
+      },
+      "DraftResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "changes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Changes",
+            "type": "object"
+          },
+          "draft_id": {
+            "format": "uuid",
+            "title": "Draft Id",
+            "type": "string"
+          },
+          "draft_revision": {
+            "title": "Draft Revision",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "input_mode": {
+            "enum": [
+              "current",
+              "frozen_parent"
+            ],
+            "title": "Input Mode",
+            "type": "string"
+          },
+          "location_revision": {
+            "title": "Location Revision",
+            "type": "integer"
+          },
+          "network_validation": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NetworkValidation"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Run Id"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Phase"
+          },
+          "preparation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preparation Id"
+          },
+          "road_coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoadCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SimulationScenario"
+              },
+              {
+                "$ref": "#/components/schemas/PreparationScenario"
+              }
+            ],
+            "title": "Scenario"
+          },
+          "scenario_hash": {
+            "title": "Scenario Hash",
+            "type": "string"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "default": "ready",
+            "enum": [
+              "preparing",
+              "ready",
+              "unavailable",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "draft_id",
+          "draft_revision",
+          "session_id",
+          "incident_id",
+          "location_revision",
+          "scenario",
+          "scenario_hash",
+          "input_mode"
+        ],
+        "title": "DraftResponse",
+        "type": "object"
+      },
+      "ErrorDetails": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Request Id"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorDetails",
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorDetails"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "EvidenceComparison": {
+        "additionalProperties": false,
+        "properties": {
+          "alternative_fact_id": {
+            "title": "Alternative Fact Id",
+            "type": "string"
+          },
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable",
+              "invalid",
+              "not_reached"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "comparison_id": {
+            "title": "Comparison Id",
+            "type": "string"
+          },
+          "comparison_kind": {
+            "enum": [
+              "policy",
+              "controlled_variant",
+              "changed_conditions",
+              "incompatible"
+            ],
+            "title": "Comparison Kind",
+            "type": "string"
+          },
+          "delta": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delta"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reason Code"
+          },
+          "reference_fact_id": {
+            "title": "Reference Fact Id",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "comparison_id",
+          "reference_fact_id",
+          "alternative_fact_id",
+          "metric",
+          "delta",
+          "unit",
+          "availability",
+          "comparison_kind"
+        ],
+        "title": "EvidenceComparison",
+        "type": "object"
+      },
+      "EvidenceFact": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable",
+              "invalid",
+              "not_reached"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "crew_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Crew Id"
+          },
+          "derivation": {
+            "title": "Derivation",
+            "type": "string"
+          },
+          "fact_id": {
+            "title": "Fact Id",
+            "type": "string"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "policy_id": {
+            "anyOf": [
+              {
+                "enum": [
+                  "baseline",
+                  "coordinated",
+                  "phased"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Policy Id"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reason Code"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "source_fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Fields",
+            "type": "array"
+          },
+          "time_scope": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "final": "#/components/schemas/FinalTime",
+                    "replay": "#/components/schemas/ReplayTime"
+                  },
+                  "propertyName": "kind"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/FinalTime"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ReplayTime"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Time Scope"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Unit"
+          },
+          "value": {
+            "$ref": "#/components/schemas/JsonValue"
+          }
+        },
+        "required": [
+          "fact_id",
+          "run_id",
+          "metric",
+          "value",
+          "availability",
+          "derivation",
+          "source_fields"
+        ],
+        "title": "EvidenceFact",
+        "type": "object"
+      },
+      "EvidencePage": {
+        "additionalProperties": false,
+        "properties": {
+          "byte_limit": {
+            "title": "Byte Limit",
+            "type": "integer"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "returned_items": {
+            "title": "Returned Items",
+            "type": "integer"
+          },
+          "total_items": {
+            "title": "Total Items",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "next_cursor",
+          "has_more",
+          "total_items",
+          "returned_items",
+          "offset",
+          "byte_limit"
+        ],
+        "title": "EvidencePage",
+        "type": "object"
+      },
+      "EvidenceRequest": {
+        "discriminator": {
+          "mapping": {
+            "assumptions": "#/components/schemas/AssumptionsRequest",
+            "comparison": "#/components/schemas/ComparisonRequest",
+            "crew": "#/components/schemas/CrewRequest",
+            "outcomes": "#/components/schemas/OutcomesRequest",
+            "replay": "#/components/schemas/ReplayRequest",
+            "sources": "#/components/schemas/SourcesRequest"
+          },
+          "propertyName": "view"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/OutcomesRequest"
+          },
+          {
+            "$ref": "#/components/schemas/CrewRequest"
+          },
+          {
+            "$ref": "#/components/schemas/SourcesRequest"
+          },
+          {
+            "$ref": "#/components/schemas/AssumptionsRequest"
+          },
+          {
+            "$ref": "#/components/schemas/ReplayRequest"
+          },
+          {
+            "$ref": "#/components/schemas/ComparisonRequest"
+          }
+        ]
+      },
+      "EvidenceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "api_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Api Version",
+            "type": "string"
+          },
+          "artifact_refs": {
+            "items": {
+              "$ref": "#/components/schemas/ArtifactReference"
+            },
+            "title": "Artifact Refs",
+            "type": "array"
+          },
+          "availability": {
+            "enum": [
+              "available",
+              "unavailable",
+              "invalid",
+              "not_reached"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "capability_version": {
+            "const": "1.0.0",
+            "default": "1.0.0",
+            "title": "Capability Version",
+            "type": "string"
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceComparison"
+            },
+            "title": "Comparisons",
+            "type": "array"
+          },
+          "evidence_id": {
+            "format": "uuid",
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceFact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "missing_reasons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Reasons",
+            "type": "array"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/EvidencePage"
+          },
+          "view": {
+            "enum": [
+              "outcomes",
+              "crew",
+              "sources",
+              "assumptions",
+              "replay",
+              "comparison"
+            ],
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "view",
+          "artifact_refs",
+          "availability",
+          "facts",
+          "comparisons",
+          "missing_reasons",
+          "pagination"
+        ],
+        "title": "EvidenceResponse",
+        "type": "object"
+      },
+      "FinalSelection": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "final",
+            "default": "final",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "FinalSelection",
+        "type": "object"
+      },
+      "FinalTime": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_time_s": {
+            "anyOf": [
+              {
+                "maximum": 3600,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Time S"
+          },
+          "kind": {
+            "const": "final",
+            "default": "final",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "effective_time_s"
+        ],
+        "title": "FinalTime",
+        "type": "object"
+      },
+      "IncidentCoordinates": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Label"
+          },
+          "lat": {
+            "maximum": 90,
+            "minimum": -90,
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "maximum": 180,
+            "minimum": -180,
+            "title": "Lon",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lon"
+        ],
+        "title": "IncidentCoordinates",
+        "type": "object"
+      },
+      "IncidentInvestigationRequest": {
+        "additionalProperties": false,
+        "description": "Start or explicitly retry one saved investigation at an owned location.",
+        "properties": {
+          "retry": {
+            "default": false,
+            "title": "Retry",
+            "type": "boolean"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Run Id"
+          }
+        },
+        "title": "IncidentInvestigationRequest",
+        "type": "object"
+      },
+      "IncidentInvestigationResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "activity": {
+            "items": {
+              "$ref": "#/components/schemas/AgentActivity"
+            },
+            "title": "Activity",
+            "type": "array"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Completed At"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "number"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "fire_observations": {
+            "items": {
+              "$ref": "#/components/schemas/ReportedFireObservation"
+            },
+            "title": "Fire Observations",
+            "type": "array"
+          },
+          "incident_id": {
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "input_bundle_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Input Bundle Id"
+          },
+          "input_bundle_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Input Bundle Sha256"
+          },
+          "location_revision": {
+            "title": "Location Revision",
+            "type": "integer"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Snapshot"
+          },
+          "stage": {
+            "enum": [
+              "initial",
+              "simulation"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "interrupted",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id",
+          "incident_id",
+          "location_revision",
+          "run_id",
+          "stage",
+          "status",
+          "created_at",
+          "activity"
+        ],
+        "title": "IncidentInvestigationResponse",
+        "type": "object"
+      },
+      "IncidentRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "coordinates": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IncidentCoordinates"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "fire_assessment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fire Assessment Id"
+          },
+          "fire_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Fire Observation Id"
+          },
+          "preset_id": {
+            "anyOf": [
+              {
+                "enum": [
+                  "paradise-2018",
+                  "palisades-2025"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preset Id"
+          },
+          "reported_address": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 5,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reported Address"
+          },
+          "reported_place": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Reported Place"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "session_id"
+        ],
+        "title": "IncidentRequest",
+        "type": "object"
+      },
+      "IncidentResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationReceipt"
+          },
+          "location_revision": {
+            "title": "Location Revision",
+            "type": "integer"
+          },
+          "preset_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preset Id"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "incident_id",
+          "session_id",
+          "location_revision",
+          "preset_id",
+          "location"
+        ],
+        "title": "IncidentResponse",
+        "type": "object"
+      },
+      "InvestigationRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "context_envelope": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Context Envelope"
+          },
+          "question": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "thread_id": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "thread_id",
+          "question"
+        ],
+        "title": "InvestigationRequest",
+        "type": "object"
+      },
+      "JsonValue": {},
+      "LocationReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "address_type": {
+            "title": "Address Type",
+            "type": "string"
+          },
+          "coordinate_system": {
+            "const": "WGS84",
+            "default": "WGS84",
+            "title": "Coordinate System",
+            "type": "string"
+          },
+          "lat": {
+            "maximum": 90,
+            "minimum": -90,
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "maximum": 180,
+            "minimum": -180,
+            "title": "Lon",
+            "type": "number"
+          },
+          "matched_address": {
+            "title": "Matched Address",
+            "type": "string"
+          },
+          "meaning": {
+            "default": "Scenario location; not confirmation of an active fire or exact historical ignition.",
+            "title": "Meaning",
+            "type": "string"
+          },
+          "origin": {
+            "default": "geocoded_address",
+            "enum": [
+              "geocoded_address",
+              "geocoded_place",
+              "user_coordinates",
+              "reported_fire"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "provider": {
+            "default": "Esri",
+            "enum": [
+              "Esri",
+              "Amazon Location",
+              "User input"
+            ],
+            "title": "Provider",
+            "type": "string"
+          },
+          "reported_address": {
+            "title": "Reported Address",
+            "type": "string"
+          },
+          "resolved_at": {
+            "title": "Resolved At",
+            "type": "string"
+          },
+          "resolver_version": {
+            "default": "esri-v1",
+            "enum": [
+              "esri-v1",
+              "amazon-location-v1",
+              "coordinates-v1",
+              "fire-observation-v1"
+            ],
+            "title": "Resolver Version",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "maximum": 100,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Score"
+          },
+          "score_meaning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Score Meaning"
+          },
+          "source_assessment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Assessment Id"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_observation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Observation Id"
+          },
+          "source_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Timestamp"
+          },
+          "status": {
+            "const": "resolved",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "reported_address",
+          "matched_address",
+          "lat",
+          "lon",
+          "address_type",
+          "resolved_at",
+          "source_id"
+        ],
+        "title": "LocationReceipt",
+        "type": "object"
+      },
+      "NetworkValidation": {
+        "additionalProperties": false,
+        "properties": {
+          "adjusted": {
+            "title": "Adjusted",
+            "type": "boolean"
+          },
+          "attempts": {
+            "items": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              "type": "object"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "checked_at": {
+            "title": "Checked At",
+            "type": "string"
+          },
+          "corridor_label": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Corridor Label"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoadCoverage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "crew_staging_distance_km": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Crew Staging Distance Km"
+          },
+          "edge_count": {
+            "maximum": 14000,
+            "minimum": 10,
+            "title": "Edge Count",
+            "type": "integer"
+          },
+          "effective_radius_km": {
+            "title": "Effective Radius Km",
+            "type": "number"
+          },
+          "extent_mode": {
+            "default": "fixed",
+            "enum": [
+              "auto",
+              "fixed"
+            ],
+            "title": "Extent Mode",
+            "type": "string"
+          },
+          "gate_count": {
+            "maximum": 3,
+            "minimum": 1,
+            "title": "Gate Count",
+            "type": "integer"
+          },
+          "gates": {
+            "items": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              "type": "object"
+            },
+            "title": "Gates",
+            "type": "array"
+          },
+          "highway_edge_count": {
+            "minimum": 1,
+            "title": "Highway Edge Count",
+            "type": "integer"
+          },
+          "network_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Network Sha256",
+            "type": "string"
+          },
+          "requested_radius_km": {
+            "title": "Requested Radius Km",
+            "type": "number"
+          },
+          "study_bounds": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            "maxItems": 2,
+            "title": "Study Bounds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "requested_radius_km",
+          "effective_radius_km",
+          "edge_count",
+          "highway_edge_count",
+          "gate_count",
+          "network_sha256",
+          "checked_at",
+          "adjusted",
+          "attempts"
+        ],
+        "title": "NetworkValidation",
+        "type": "object"
+      },
+      "OutcomesRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "policy_ids": {
+            "items": {
+              "enum": [
+                "baseline",
+                "coordinated",
+                "phased"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Policy Ids",
+            "type": "array"
+          },
+          "run_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "time_scope": {
+            "$ref": "#/components/schemas/FinalSelection"
+          },
+          "view": {
+            "const": "outcomes",
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_ids",
+          "view"
+        ],
+        "title": "OutcomesRequest",
+        "type": "object"
+      },
+      "PreparationScenario": {
+        "additionalProperties": false,
+        "description": "An explicit point awaiting the worker's corridor and exit selection.",
+        "properties": {
+          "background_speed_factor": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.3,
+            "title": "Background Speed Factor",
+            "type": "number"
+          },
+          "crews": {
+            "default": 4,
+            "maximum": 16,
+            "minimum": 0,
+            "title": "Crews",
+            "type": "integer"
+          },
+          "departure_minutes": {
+            "default": 10,
+            "maximum": 45,
+            "minimum": 1,
+            "title": "Departure Minutes",
+            "type": "integer"
+          },
+          "duration_minutes": {
+            "default": 30,
+            "maximum": 60,
+            "minimum": 5,
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "exit_direction": {
+            "const": "auto",
+            "default": "auto",
+            "title": "Exit Direction",
+            "type": "string"
+          },
+          "hazard_growth_m_min": {
+            "default": 10,
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Hazard Growth M Min",
+            "type": "number"
+          },
+          "hazard_radius_m": {
+            "default": 150,
+            "maximum": 3000,
+            "minimum": 0,
+            "title": "Hazard Radius M",
+            "type": "number"
+          },
+          "hazard_start_minutes": {
+            "default": 5,
+            "maximum": 45,
+            "minimum": 0,
+            "title": "Hazard Start Minutes",
+            "type": "integer"
+          },
+          "highway": {
+            "const": "auto",
+            "default": "auto",
+            "title": "Highway",
+            "type": "string"
+          },
+          "lat": {
+            "maximum": 90,
+            "minimum": -90,
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "maximum": 180,
+            "minimum": -180,
+            "title": "Lon",
+            "type": "number"
+          },
+          "people_per_vehicle": {
+            "default": 2,
+            "maximum": 8,
+            "minimum": 1,
+            "title": "People Per Vehicle",
+            "type": "integer"
+          },
+          "policies": {
+            "items": {
+              "enum": [
+                "baseline",
+                "coordinated",
+                "phased"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Policies",
+            "type": "array"
+          },
+          "radius_km": {
+            "maximum": 15,
+            "minimum": 2,
+            "title": "Radius Km",
+            "type": "number"
+          },
+          "seed": {
+            "default": 42,
+            "maximum": 2147483647,
+            "minimum": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "traffic_mode": {
+            "default": "synthetic",
+            "enum": [
+              "synthetic",
+              "provider_speed_limits"
+            ],
+            "title": "Traffic Mode",
+            "type": "string"
+          },
+          "vehicles": {
+            "default": 400,
+            "maximum": 1500,
+            "minimum": 20,
+            "title": "Vehicles",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lat",
+          "lon",
+          "radius_km"
+        ],
+        "title": "PreparationScenario",
+        "type": "object"
+      },
+      "PrepareRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "departure_minutes": {
+            "default": 10,
+            "maximum": 30,
+            "minimum": 1,
+            "title": "Departure Minutes",
+            "type": "integer"
+          },
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "location_revision": {
+            "minimum": 1,
+            "title": "Location Revision",
+            "type": "integer"
+          },
+          "radius_km": {
+            "anyOf": [
+              {
+                "maximum": 15,
+                "minimum": 2,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Radius Km"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "traffic_mode": {
+            "default": "synthetic",
+            "enum": [
+              "synthetic",
+              "provider_speed_limits"
+            ],
+            "title": "Traffic Mode",
+            "type": "string"
+          },
+          "vehicles": {
+            "default": 400,
+            "maximum": 1500,
+            "minimum": 20,
+            "title": "Vehicles",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "request_id",
+          "session_id",
+          "incident_id",
+          "location_revision"
+        ],
+        "title": "PrepareRequest",
+        "type": "object"
+      },
+      "ReplayRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "policy_ids": {
+            "items": {
+              "enum": [
+                "baseline",
+                "coordinated",
+                "phased"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Policy Ids",
+            "type": "array"
+          },
+          "run_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "time_scope": {
+            "$ref": "#/components/schemas/ReplaySelection"
+          },
+          "view": {
+            "const": "replay",
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_ids",
+          "view",
+          "time_scope"
+        ],
+        "title": "ReplayRequest",
+        "type": "object"
+      },
+      "ReplaySelection": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "replay",
+            "title": "Kind",
+            "type": "string"
+          },
+          "requested_time_s": {
+            "maximum": 3600,
+            "minimum": 0,
+            "title": "Requested Time S",
+            "type": "number"
+          }
+        },
+        "required": [
+          "kind",
+          "requested_time_s"
+        ],
+        "title": "ReplaySelection",
+        "type": "object"
+      },
+      "ReplayTime": {
+        "additionalProperties": false,
+        "properties": {
+          "effective_time_s": {
+            "anyOf": [
+              {
+                "maximum": 3600,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Effective Time S"
+          },
+          "kind": {
+            "const": "replay",
+            "default": "replay",
+            "title": "Kind",
+            "type": "string"
+          },
+          "requested_time_s": {
+            "maximum": 3600,
+            "minimum": 0,
+            "title": "Requested Time S",
+            "type": "number"
+          }
+        },
+        "required": [
+          "requested_time_s",
+          "effective_time_s"
+        ],
+        "title": "ReplayTime",
+        "type": "object"
+      },
+      "ReportedFireObservation": {
+        "additionalProperties": false,
+        "description": "An owned immutable source point; independent of guidance and spread-model availability.",
+        "properties": {
+          "latitude": {
+            "maximum": 90,
+            "minimum": -90,
+            "title": "Latitude",
+            "type": "number"
+          },
+          "longitude": {
+            "maximum": 180,
+            "minimum": -180,
+            "title": "Longitude",
+            "type": "number"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Name"
+          },
+          "observation_id": {
+            "format": "uuid",
+            "title": "Observation Id",
+            "type": "string"
+          },
+          "source_id": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_timestamp": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Timestamp"
+          }
+        },
+        "required": [
+          "observation_id",
+          "source_id",
+          "latitude",
+          "longitude"
+        ],
+        "title": "ReportedFireObservation",
+        "type": "object"
+      },
+      "RoadCoverage": {
+        "description": "Completed road-coverage evidence, separate from provider or native-operation failures.",
+        "properties": {
+          "attempts": {
+            "items": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              "type": "object"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "extent_mode": {
+            "enum": [
+              "auto",
+              "fixed"
+            ],
+            "title": "Extent Mode",
+            "type": "string"
+          },
+          "message": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Message",
+            "type": "string"
+          },
+          "reason_code": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Reason Code",
+            "type": "string"
+          },
+          "requested_radius_km": {
+            "anyOf": [
+              {
+                "maximum": 15,
+                "minimum": 2,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Requested Radius Km"
+          },
+          "searched_radius_km": {
+            "maximum": 15,
+            "minimum": 2,
+            "title": "Searched Radius Km",
+            "type": "number"
+          },
+          "source_snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Snapshot"
+          },
+          "study_bounds": {
+            "items": {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            "maxItems": 2,
+            "title": "Study Bounds",
+            "type": "array"
+          }
+        },
+        "required": [
+          "reason_code",
+          "message",
+          "extent_mode",
+          "searched_radius_km"
+        ],
+        "title": "RoadCoverage",
+        "type": "object"
+      },
+      "RunResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "draft_id": {
+            "format": "uuid",
+            "title": "Draft Id",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "location_revision": {
+            "title": "Location Revision",
+            "type": "integer"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parent Run Id"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "number"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/SimulationScenario"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "running",
+              "cancelling",
+              "cancelled",
+              "completed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "session_id",
+          "incident_id",
+          "location_revision",
+          "status",
+          "progress",
+          "phase",
+          "scenario",
+          "created_at",
+          "draft_id"
+        ],
+        "title": "RunResponse",
+        "type": "object"
+      },
+      "SessionPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "expected_revision": {
+            "minimum": 1,
+            "title": "Expected Revision",
+            "type": "integer"
+          },
+          "policy_id": {
+            "default": "baseline",
+            "enum": [
+              "baseline",
+              "coordinated",
+              "phased"
+            ],
+            "title": "Policy Id",
+            "type": "string"
+          },
+          "replay_time_s": {
+            "default": 0.0,
+            "maximum": 3600,
+            "minimum": 0,
+            "title": "Replay Time S",
+            "type": "number"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "selected_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Selected Run Id"
+          }
+        },
+        "required": [
+          "request_id",
+          "expected_revision"
+        ],
+        "title": "SessionPatch",
+        "type": "object"
+      },
+      "SessionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "entry_mode": {
+            "enum": [
+              "radio",
+              "lab"
+            ],
+            "title": "Entry Mode",
+            "type": "string"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "entry_mode"
+        ],
+        "title": "SessionRequest",
+        "type": "object"
+      },
+      "SessionResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "entry_mode": {
+            "enum": [
+              "radio",
+              "lab"
+            ],
+            "title": "Entry Mode",
+            "type": "string"
+          },
+          "incident_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Incident Id"
+          },
+          "latest_draft_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Latest Draft Id"
+          },
+          "policy_id": {
+            "default": "baseline",
+            "enum": [
+              "baseline",
+              "coordinated",
+              "phased"
+            ],
+            "title": "Policy Id",
+            "type": "string"
+          },
+          "replay_time_s": {
+            "default": 0.0,
+            "maximum": 3600,
+            "minimum": 0,
+            "title": "Replay Time S",
+            "type": "number"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "selected_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Selected Run Id"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "revision",
+          "entry_mode"
+        ],
+        "title": "SessionResponse",
+        "type": "object"
+      },
+      "SimulationOutput": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "capability_version": {
+            "default": "1.0.0",
+            "title": "Capability Version",
+            "type": "string"
+          },
+          "draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DraftResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceResponse"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "location_revision": {
+            "title": "Location Revision",
+            "type": "integer"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "submitted",
+              "answer",
+              "needs_input",
+              "unsupported",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "turn_id": {
+            "format": "uuid",
+            "title": "Turn Id",
+            "type": "string"
+          },
+          "ui_actions": {
+            "items": {
+              "$ref": "#/components/schemas/UiAction"
+            },
+            "title": "Ui Actions",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "session_id",
+          "incident_id",
+          "location_revision",
+          "turn_id",
+          "status",
+          "question",
+          "answer"
+        ],
+        "title": "SimulationOutput",
+        "type": "object"
+      },
+      "SimulationScenario": {
+        "additionalProperties": false,
+        "description": "The integration boundary requires explicit geographic/profile choices.",
+        "properties": {
+          "background_speed_factor": {
+            "default": 1.0,
+            "maximum": 1.0,
+            "minimum": 0.3,
+            "title": "Background Speed Factor",
+            "type": "number"
+          },
+          "crews": {
+            "default": 4,
+            "maximum": 16,
+            "minimum": 0,
+            "title": "Crews",
+            "type": "integer"
+          },
+          "departure_minutes": {
+            "default": 10,
+            "maximum": 45,
+            "minimum": 1,
+            "title": "Departure Minutes",
+            "type": "integer"
+          },
+          "duration_minutes": {
+            "default": 30,
+            "maximum": 60,
+            "minimum": 5,
+            "title": "Duration Minutes",
+            "type": "integer"
+          },
+          "exit_direction": {
+            "enum": [
+              "south",
+              "north",
+              "east",
+              "west"
+            ],
+            "title": "Exit Direction",
+            "type": "string"
+          },
+          "hazard_growth_m_min": {
+            "default": 10,
+            "maximum": 100,
+            "minimum": 0,
+            "title": "Hazard Growth M Min",
+            "type": "number"
+          },
+          "hazard_radius_m": {
+            "default": 150,
+            "maximum": 3000,
+            "minimum": 0,
+            "title": "Hazard Radius M",
+            "type": "number"
+          },
+          "hazard_start_minutes": {
+            "default": 5,
+            "maximum": 45,
+            "minimum": 0,
+            "title": "Hazard Start Minutes",
+            "type": "integer"
+          },
+          "highway": {
+            "pattern": "^(?:(?:State|US|Interstate) [0-9]{1,3}|osm:(?:ref|name):[0-9a-f]{20}|osm:way:[0-9]+)$",
+            "title": "Highway",
+            "type": "string"
+          },
+          "lat": {
+            "maximum": 90,
+            "minimum": -90,
+            "title": "Lat",
+            "type": "number"
+          },
+          "lon": {
+            "maximum": 180,
+            "minimum": -180,
+            "title": "Lon",
+            "type": "number"
+          },
+          "people_per_vehicle": {
+            "default": 2,
+            "maximum": 8,
+            "minimum": 1,
+            "title": "People Per Vehicle",
+            "type": "integer"
+          },
+          "policies": {
+            "items": {
+              "enum": [
+                "baseline",
+                "coordinated",
+                "phased"
+              ],
+              "type": "string"
+            },
+            "maxItems": 3,
+            "minItems": 1,
+            "title": "Policies",
+            "type": "array"
+          },
+          "radius_km": {
+            "maximum": 15,
+            "minimum": 2,
+            "title": "Radius Km",
+            "type": "number"
+          },
+          "seed": {
+            "default": 42,
+            "maximum": 2147483647,
+            "minimum": 0,
+            "title": "Seed",
+            "type": "integer"
+          },
+          "traffic_mode": {
+            "default": "synthetic",
+            "enum": [
+              "synthetic",
+              "provider_speed_limits"
+            ],
+            "title": "Traffic Mode",
+            "type": "string"
+          },
+          "vehicles": {
+            "default": 400,
+            "maximum": 1500,
+            "minimum": 20,
+            "title": "Vehicles",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "lat",
+          "lon",
+          "radius_km",
+          "highway",
+          "exit_direction"
+        ],
+        "title": "SimulationScenario",
+        "type": "object"
+      },
+      "SourcesRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cursor"
+          },
+          "run_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 2,
+            "minItems": 1,
+            "title": "Run Ids",
+            "type": "array"
+          },
+          "view": {
+            "const": "sources",
+            "title": "View",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_ids",
+          "view"
+        ],
+        "title": "SourcesRequest",
+        "type": "object"
+      },
+      "StatusRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id"
+        ],
+        "title": "StatusRequest",
+        "type": "object"
+      },
+      "SubmitRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "capability_version": {
+            "title": "Capability Version",
+            "type": "string"
+          },
+          "draft_id": {
+            "format": "uuid",
+            "title": "Draft Id",
+            "type": "string"
+          },
+          "draft_revision": {
+            "minimum": 1,
+            "title": "Draft Revision",
+            "type": "integer"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "draft_id",
+          "draft_revision",
+          "request_id",
+          "capability_version"
+        ],
+        "title": "SubmitRequest",
+        "type": "object"
+      },
+      "TurnRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "draft_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Draft Id"
+          },
+          "incident_id": {
+            "format": "uuid",
+            "title": "Incident Id",
+            "type": "string"
+          },
+          "intent": {
+            "default": "question",
+            "enum": [
+              "question",
+              "prepare",
+              "submit",
+              "analyze"
+            ],
+            "title": "Intent",
+            "type": "string"
+          },
+          "location_revision": {
+            "minimum": 1,
+            "title": "Location Revision",
+            "type": "integer"
+          },
+          "policy_id": {
+            "default": "baseline",
+            "enum": [
+              "baseline",
+              "coordinated",
+              "phased"
+            ],
+            "title": "Policy Id",
+            "type": "string"
+          },
+          "question": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          },
+          "replay_time_s": {
+            "default": 0.0,
+            "maximum": 3600,
+            "minimum": 0,
+            "title": "Replay Time S",
+            "type": "number"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Run Id"
+          },
+          "session_id": {
+            "format": "uuid",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "session_id",
+          "incident_id",
+          "location_revision",
+          "question"
+        ],
+        "title": "TurnRequest",
+        "type": "object"
+      },
+      "UiAction": {
+        "additionalProperties": false,
+        "properties": {
+          "crew_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Crew Id"
+          },
+          "draft_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Draft Id"
+          },
+          "panel": {
+            "anyOf": [
+              {
+                "enum": [
+                  "overview",
+                  "bottlenecks",
+                  "crews",
+                  "evidence"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Panel"
+          },
+          "policy_id": {
+            "anyOf": [
+              {
+                "enum": [
+                  "baseline",
+                  "coordinated",
+                  "phased"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Policy Id"
+          },
+          "time_s": {
+            "anyOf": [
+              {
+                "maximum": 3600,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Time S"
+          },
+          "type": {
+            "enum": [
+              "select_policy",
+              "seek_time",
+              "focus_crew",
+              "open_panel",
+              "open_comparison",
+              "inspect_source",
+              "show_variant_draft"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "UiAction",
+        "type": "object"
+      },
+      "VariantChanges": {
+        "additionalProperties": false,
+        "properties": {
+          "departure_minutes": {
+            "anyOf": [
+              {
+                "maximum": 45,
+                "minimum": 1,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Departure Minutes"
+          },
+          "vehicles": {
+            "anyOf": [
+              {
+                "maximum": 1500,
+                "minimum": 20,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Vehicles"
+          }
+        },
+        "title": "VariantChanges",
+        "type": "object"
+      },
+      "VariantRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "capability_version": {
+            "title": "Capability Version",
+            "type": "string"
+          },
+          "changes": {
+            "$ref": "#/components/schemas/VariantChanges"
+          },
+          "input_mode": {
+            "const": "frozen_parent",
+            "default": "frozen_parent",
+            "title": "Input Mode",
+            "type": "string"
+          },
+          "parent_run_id": {
+            "format": "uuid",
+            "title": "Parent Run Id",
+            "type": "string"
+          },
+          "request_id": {
+            "format": "uuid",
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "parent_run_id",
+          "changes",
+          "request_id",
+          "capability_version"
+        ],
+        "title": "VariantRequest",
+        "type": "object"
+      }
+    }
+  },
+  "description": "Generated by scripts/export_integration_contracts.py; do not edit.",
+  "tools": [
+    {
+      "description": "Read bounded simulation evidence. Follow pagination before comparing outcomes.",
+      "input_schema": {
+        "$ref": "#/components/schemas/EvidenceRequest"
+      },
+      "name": "get_simulation_evidence",
+      "output_schema": {
+        "$ref": "#/components/schemas/EvidenceResponse"
+      }
+    },
+    {
+      "description": "Prepare current-input scenario; does not start a job.",
+      "input_schema": {
+        "$ref": "#/components/schemas/PrepareRequest"
+      },
+      "name": "prepare_simulation",
+      "output_schema": {
+        "$ref": "#/components/schemas/DraftResponse"
+      }
+    },
+    {
+      "description": "Submit a reviewed draft once.",
+      "input_schema": {
+        "$ref": "#/components/schemas/SubmitRequest"
+      },
+      "name": "submit_simulation",
+      "output_schema": {
+        "$ref": "#/components/schemas/RunResponse"
+      }
+    },
+    {
+      "description": "Read the selected run status and progress.",
+      "input_schema": {
+        "$ref": "#/components/schemas/StatusRequest"
+      },
+      "name": "get_simulation_status",
+      "output_schema": {
+        "$ref": "#/components/schemas/RunResponse"
+      }
+    },
+    {
+      "description": "Prepare a controlled frozen-input variant.",
+      "input_schema": {
+        "$ref": "#/components/schemas/VariantRequest"
+      },
+      "name": "create_simulation_variant",
+      "output_schema": {
+        "$ref": "#/components/schemas/DraftResponse"
+      }
+    }
+  ]
+}

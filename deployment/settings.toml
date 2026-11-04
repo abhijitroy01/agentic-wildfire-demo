@@ -1,0 +1,716 @@
+# FireGUard operational settings, shared by every installation (decisions D23 and D24).
+#
+# This file is the only place to set operational limits, budgets, rates, sizes, counts, TTLs,
+# concurrency and task sizes. The AgentCore Runtime's per-turn safety bounds (tool-call budgets,
+# reasoning deadlines, Memory read sizes, model output budgets) are protocol constants in
+# backend/runtime code instead. There are no command-line options for them: edit a value here and run
+# `bash deployment/deploy-all.sh --apply`. Every deploy applies exactly what this file says (plus the
+# optional [settings] overrides in your deployment/installation.toml) and records the effective values
+# in the release folder.
+#
+# Each setting is a small table:
+#   value        the default, in the unit named by the key (TOML integer, float, string, boolean or list)
+#   unit         the unit, also part of the key name
+#   min, max     the allowed range for numbers, or
+#   allowed      the allowed values for strings
+#   description  one line
+#
+# Names: a key is unique across sections. Its CloudFormation parameter is the key in CamelCase
+# (requests_per_ip_per_5_minutes -> RequestsPerIpPer5Minutes) and a container reads it as the upper-case
+# environment variable (REQUESTS_PER_IP_PER_5_MINUTES). The settings table in
+# architecture/29-workspace-operations.md is generated from this file:
+#   .venv/bin/python -m deployment.installation          (rewrite the table)
+#   .venv/bin/python -m deployment.installation --check  (fail on drift)
+#
+# Components read these values too: traffic-simulator/traffic_simulator/settings.py,
+# backend/api_settings.py and firetruck-simulator/config/settings.py (the firetruck_*
+# limits its service reads).
+# Deployed tasks get each value they read as its environment
+# variable (the WAF settings go straight into the WAF rules); local development and the tests use the value
+# written here (tests override it through the variable).
+
+# Daily budgets count every visitor together, per UTC day, in the jobs table (counters expire through TTL).
+[budgets.tomtom_calls_per_day]
+value = 1000
+unit = "calls"
+min = 0
+max = 100000
+description = "TomTom traffic requests all visitors may cause per UTC day (runs and source lookups; reused cached readings are free). Past it, runs continue with traffic speeds marked unavailable."
+
+[budgets.agent_requests_per_day]
+value = 500
+unit = "requests"
+min = 0
+max = 100000
+description = "AgentCore agent requests (Bedrock) all visitors may start per UTC day: agent turns, investigations, radio investigations and firetruck reports. Past it, 429 DAILY_LIMIT_REACHED."
+
+[budgets.geocoding_requests_per_day]
+value = 1000
+unit = "requests"
+min = 0
+max = 100000
+description = "Amazon Location address lookups (new incidents) all visitors may start per UTC day. Past it, 429 DAILY_LIMIT_REACHED."
+
+# The optional Delphire camera ([camera] in the installation file) reaches visitors only through the workspace API.
+# The default is a cap, not a sizing: size it when an installation turns the camera on.
+[budgets.camera_calls_per_day]
+value = 1000
+unit = "calls"
+min = 0
+max = 100000
+description = "Delphire camera calls (latest records, refreshes and images) all visitors may cause per UTC day; reused answers are free. Each API process fetches on its own, so steady demand costs up to 2 x 86400 / cache.camera_cache_seconds latest calls per API task per day (2,880 at 60 s) plus images. Past it, 429 DAILY_LIMIT_REACHED."
+
+[capacity.active_jobs_all_visitors]
+value = 5
+unit = "jobs"
+min = 1
+max = 100
+description = "Queued, running and cancelling simulation jobs (runs and road-network preparations) across all visitors. Past it, 503 SIMULATOR_BUSY with Retry-After."
+
+[capacity.active_jobs_per_session]
+value = 2
+unit = "jobs"
+min = 1
+max = 10
+description = "Queued, running and cancelling simulation jobs one demo session (or the local developer) may have at once. Past it, 429 ACTIVE_RUN_LIMIT."
+
+[capacity.demo_session_days]
+value = 7
+unit = "days"
+min = 1
+max = 30
+description = "Lifetime of a demo session cookie and of every record it creates (sessions, incidents, drafts, turns, jobs, receipts), which DynamoDB TTL then deletes."
+
+[capacity.discoveries_per_api_process]
+value = 8
+unit = "discoveries"
+min = 1
+max = 64
+description = "Legacy synchronous discovery process slots; new OSM discoveries use the SUMO worker queue and shared admission."
+
+[capacity.investigations_per_api_process]
+value = 4
+unit = "investigations"
+min = 1
+max = 32
+description = "Saved background investigations executing per API process (two processes per API task). Includes cancelled calls still returning; excess requests get 503 INVESTIGATION_BUSY before billing or starting a task."
+
+[capacity.request_body_max_kib]
+value = 160
+unit = "KiB"
+min = 64
+max = 1024
+description = "Largest API request body. A larger body gets 413 BODY_TOO_LARGE before any model or provider sees it."
+
+[capacity.request_body_seconds]
+value = 20
+unit = "seconds"
+min = 5
+max = 120
+description = "Time a client has to send an API request body. A slower body gets 408 REQUEST_TIMEOUT."
+
+# The workspace API's camera broker (the optional [camera] section of the installation file).
+[capacity.camera_image_max_kib]
+value = 2048
+unit = "KiB"
+min = 64
+max = 10240
+description = "Largest camera image (WebP or PNG) the broker reads from Delphire and serves. A larger image gets 502 CAMERA_IMAGE_TOO_LARGE."
+
+# Two calls (latest, then an image) must fit CloudFront's 60-second origin timeout, so the maximum is 25.
+[capacity.camera_request_timeout_seconds]
+value = 10
+unit = "seconds"
+min = 2
+max = 25
+description = "Longest one Delphire camera call may take, from connecting to its last byte. A slower call gets 503 CAMERA_UNAVAILABLE."
+
+# ECS task sizes. Each <task>_vcpu and <task>_memory_gib pair must be a Fargate size, which the deployer checks before
+# any AWS call: 1 vCPU takes 2-8 GiB, 2 vCPU 4-16 GiB, 4 vCPU 8-30 GiB, 8 vCPU 16-60 GiB in 4 GiB steps and
+# 16 vCPU 32-120 GiB in 8 GiB steps. A changed size starts new tasks with a new task definition revision.
+[capacity.api_vcpu]
+value = 1
+unit = "vCPU"
+min = 1
+max = 16
+description = "vCPUs of the workspace API task (Fargate size with capacity.api_memory_gib)."
+
+[capacity.api_memory_gib]
+value = 4
+unit = "GiB"
+min = 2
+max = 120
+description = "Memory of the workspace API task."
+
+[capacity.worker_vcpu]
+value = 4
+unit = "vCPU"
+min = 1
+max = 16
+description = "vCPUs of the SUMO worker task (Fargate size with capacity.worker_memory_gib); each policy simulated at once uses one."
+
+[capacity.worker_memory_gib]
+value = 8
+unit = "GiB"
+min = 2
+max = 120
+description = "Memory of the SUMO worker task."
+
+[capacity.worker_tasks]
+value = 2
+unit = "tasks"
+min = 1
+max = 5
+description = "Independent SUMO worker tasks consuming the shared queue. Each runs one job at a time; two tasks allow two scenarios or road preparations to execute concurrently without sharing mutable SUMO state."
+
+[capacity.firetruck_vcpu]
+value = 1
+unit = "vCPU"
+min = 1
+max = 16
+description = "vCPUs of the private firetruck service task (Fargate size with capacity.firetruck_memory_gib)."
+
+[capacity.firetruck_memory_gib]
+value = 2
+unit = "GiB"
+min = 2
+max = 120
+description = "Memory of the private firetruck service task."
+
+[capacity.radio_vcpu]
+value = 1
+unit = "vCPU"
+min = 1
+max = 16
+description = "vCPUs of the private radio service task (Fargate size with capacity.radio_memory_gib)."
+
+[capacity.radio_memory_gib]
+value = 2
+unit = "GiB"
+min = 2
+max = 120
+description = "Memory of the private radio service task."
+
+# The firetruck demonstration (Response Tracker). The private firetruck service reads the run lifetime, runs per task
+# and evidence events; the workspace API's broker reads the run lifetime and the per-session limits.
+# A finished run's final evidence keeps every event, and the broker reads at most 2 MiB of evidence (a two-hour run
+# measured 1.27 MB), so the run lifetime can only be lowered from 120 minutes.
+[capacity.firetruck_run_lifetime_minutes]
+value = 120
+unit = "minutes"
+min = 10
+max = 120
+description = "Longest a firetruck run lasts before the service stops it and saves its final evidence; the broker also stops counting an older run as active."
+
+[capacity.firetruck_runs_per_task]
+value = 50
+unit = "runs"
+min = 1
+max = 200
+description = "Firetruck runs one private firetruck service task simulates at once. Past it, a new run gets 429 FIRETRUCK_UNAVAILABLE (retryable)."
+
+# 500 matches the UI's 500-event history; a running snapshot of 5,000 events stays well under the broker's 2 MiB cap.
+[capacity.firetruck_evidence_events_max]
+value = 500
+unit = "events"
+min = 50
+max = 5000
+description = "Latest timeline events each running firetruck evidence snapshot carries; earlier events are counted, not stored, and a finished run's final snapshot keeps every event."
+
+[capacity.firetruck_active_runs_per_session]
+value = 2
+unit = "runs"
+min = 1
+max = 10
+description = "Firetruck runs one demo session (or the local developer) may have starting or running at once. Past it, 429 RUN_LIMIT until one stops or reaches its lifetime."
+
+[capacity.firetruck_runs_per_session]
+value = 100
+unit = "runs"
+min = 1
+max = 200
+description = "Firetruck runs one demo session may start in its lifetime. Past it, 429 RUN_LIMIT."
+
+[capacity.firetruck_streams_per_session]
+value = 4
+unit = "streams"
+min = 1
+max = 20
+description = "Live firetruck update streams (WebSockets) one demo session may have open at once. Past it, the new stream is closed with code 1008 (STREAM_LIMIT)."
+
+[capacity.firetruck_stream_lifetime_minutes]
+value = 15
+unit = "minutes"
+min = 1
+max = 60
+description = "Longest one live firetruck update stream stays open, never past its demo session; the stream then closes."
+
+[rate_limits.demo_sessions_per_ip_per_day]
+value = 20
+unit = "sessions"
+min = 1
+max = 100000
+description = "New demo sessions one viewer IP may start per UTC day; each session has its own job limits. Past it, 429 DEMO_SESSION_LIMIT."
+
+[rate_limits.requests_per_ip_per_5_minutes]
+value = 600
+unit = "requests"
+min = 100
+max = 100000
+description = "WAF rate rule on the API load balancer: requests one viewer IP may send in any 5-minute window before WAF blocks it."
+
+# WAF accepts rate limits from 10. Visitors behind one shared address (an office or event network) share this limit.
+[rate_limits.work_requests_per_ip_per_5_minutes]
+value = 20
+unit = "requests"
+min = 10
+max = 100000
+description = "WAF rate rule for requests that start work (runs, variants, drafts, Traffic Lab runs and lookups, agent turns, radio streams, firetruck runs and reports): requests one viewer IP may send in any 5-minute window before WAF answers 429."
+
+# A scenario has at most three policies. The deployer refuses a value above capacity.worker_vcpu.
+[simulation.policy_parallelism]
+value = 3
+unit = "policies"
+min = 1
+max = 3
+description = "Scenario policies one worker simulates at once, each in its own process with its own SUMO; 1 runs them one after another. Results are identical either way."
+
+# The published simulation contract allows at most 15 km, so this setting can only lower the limit.
+[simulation.max_study_radius_km]
+value = 15.0
+unit = "km"
+min = 2.0
+max = 15.0
+description = "Largest study-area radius a visitor may simulate, discover or look up sources for. A larger radius gets 422 RADIUS_TOO_LARGE."
+
+# The published simulation contract allows at most 14,000 edges (network_validation.edge_count), so this setting can
+# only lower the limit.
+[simulation.max_network_edges]
+value = 14000
+unit = "edges"
+min = 1000
+max = 14000
+description = "Largest road network a run or road-network preparation accepts, counted as SUMO edges open to cars and longer than 15 m. A larger network fails a run; a preparation tries a smaller extent."
+
+[simulation.overpass_response_max_mb]
+value = 50
+unit = "MB"
+min = 1
+max = 100
+description = "Largest OpenStreetMap road download from Overpass, in megabytes of 1,000,000 bytes. The download stops there and counts as a network that is too large."
+
+# One page holds at most 200 highway features, and a whole study area's geometry is usually under 1 MB.
+[simulation.caltrans_response_max_mb]
+value = 20
+unit = "MB"
+min = 1
+max = 100
+description = "Largest Caltrans highway-service response one highway discovery request reads, in megabytes of 1,000,000 bytes. A larger response stops the discovery with a size error."
+
+[simulation.tomtom_requests_per_run]
+value = 12
+unit = "requests"
+min = 1
+max = 50
+description = "TomTom flow readings one traffic-speed run captures, at sample points at least 1 km apart on the study area's highways."
+
+# TomTom answers requests past a plan's queries-per-second limit with 429, which stops a traffic-speed run, so keep
+# this within the plan's limit.
+[simulation.tomtom_request_concurrency]
+value = 4
+unit = "requests"
+min = 1
+max = 12
+description = "TomTom flow requests one traffic-speed run sends at once; 1 sends them one after another. Each still spends the daily budget first, in sample-point order, and the saved traffic snapshot is the same either way."
+
+[simulation.tomtom_response_max_age_seconds]
+value = 300
+unit = "seconds"
+min = 60
+max = 900
+description = "Oldest provider response date accepted when a TomTom reading is fetched; an older or future-dated response is rejected."
+
+[cache.tomtom_cache_minutes]
+value = 10
+unit = "minutes"
+min = 0
+max = 30
+description = "How long one process reuses a TomTom reading for the same point, and how old a reading a run still applies (at least the response age above). 0 turns reuse off."
+
+[cache.camera_cache_seconds]
+value = 60
+unit = "seconds"
+min = 10
+max = 600
+description = "How long one API process reuses the camera's latest records and image for every visitor before calling Delphire again; only the image ID in those records is served."
+
+# Road networks are cached by area, Overpass road query, netconvert options and SUMO version. A worker keeps them on
+# its scratch disk; in AWS the artifacts bucket also shares them under network-cache/ (lifecycle rule below).
+[cache.network_cache_days]
+value = 30
+unit = "days"
+min = 1
+max = 365
+description = "How long the artifacts bucket keeps a shared road network under network-cache/ before a lifecycle rule deletes it. The next run of that area builds it again from current OpenStreetMap data."
+
+[cache.cached_networks_per_worker]
+value = 50
+unit = "networks"
+min = 1
+max = 1000
+description = "Road networks one worker keeps on its scratch disk for reuse. Past it, the least recently used are deleted, never the one a run is using."
+
+[cache.cached_network_mib_per_worker]
+value = 4096
+unit = "MiB"
+min = 1
+max = 20480
+description = "Scratch disk one worker's cached road networks may use (the worker task has 30 GiB). Past it, the least recently used are deleted, never the one a run is using."
+
+[cache.demo_areas_to_prebuild]
+value = ["paradise"]
+unit = "areas"
+allowed = ["paradise", "malibu"]
+description = "Traffic Lab example areas (/api/v1/research/examples/<name>) whose road networks a starting worker prepares while no job waits, one area at a time, so first runs there skip the network build. [] turns this off."
+
+[budgets.fire_risk_assessments_per_day]
+value = 1000
+unit = "assessments"
+min = 0
+max = 100000
+description = "New fire and mode assessments all visitors may start per UTC day; retained reads consume no budget."
+
+[budgets.fire_risk_weather_calls_per_day]
+value = 1000
+unit = "calls"
+min = 0
+max = 100000
+description = "DTN fire-coordinate batch lookups all visitors may cause per UTC day; retained reads consume no budget."
+
+[capacity.fire_risk_vcpu]
+value = 1
+unit = "vCPU"
+min = 1
+max = 16
+description = "vCPUs of the private fire risk modeler Fargate task."
+
+[capacity.fire_risk_memory_gib]
+value = 2
+unit = "GiB"
+min = 2
+max = 120
+description = "Memory of the private fire risk modeler Fargate task."
+
+[capacity.fire_risk_max_fires_per_turn]
+value = 4
+unit = "fires"
+min = 1
+max = 4
+description = "Maximum valid observed fires enriched after one completed chat turn."
+
+[capacity.fire_risk_postprocessing_seconds]
+value = 30
+unit = "seconds"
+min = 15
+max = 60
+description = "Time reserved inside the investigation lease for final source receipts and durable risk outbox creation. Weather and landscape jobs run independently."
+
+[capacity.fire_risk_weather_timeout_seconds]
+value = 330
+unit = "seconds"
+min = 330
+max = 900
+description = "Background DTN invocation wait: the existing Lambda maximum execution of 300 seconds plus one 30-second adapter socket interval for cold-start/delivery. Independent of the chat lease."
+
+[capacity.fire_risk_request_body_max_kib]
+value = 256
+unit = "KiB"
+min = 16
+max = 2048
+description = "Maximum normalized private model request body."
+
+[capacity.fire_risk_response_max_kib]
+value = 256
+unit = "KiB"
+min = 16
+max = 256
+description = "Maximum private response retained in one owner-scoped assessment: 256 KiB accommodates the measured 198,183-byte maximum-grid result; the independent 350 KiB DynamoDB attribute-envelope guard still applies."
+
+[capacity.fire_risk_perimeter_max_vertices]
+value = 4096
+unit = "vertices"
+min = 32
+max = 16384
+description = "Maximum observed perimeter vertices accepted by the modeler."
+
+[capacity.fire_risk_calculations_per_process]
+value = 1
+unit = "calculations"
+min = 1
+max = 16
+description = "One CPU-bound terrain calculation at a time on the default one-vCPU modeler, avoiding duplicate grid/native-state memory. Excess requests retain their sealed inputs and wait on explicit model admission."
+
+[capacity.fire_risk_calculation_timeout_seconds]
+value = 8
+unit = "seconds"
+min = 1
+max = 10
+description = "Maximum private calculation wall time; a slower model returns unavailable."
+
+[simulation.fire_risk_inner_km]
+value = 5.0
+unit = "km"
+min = 0.1
+max = 100
+description = "Inner proximity context band; an illustrative distance, not a predicted spread time."
+
+[simulation.fire_risk_middle_km]
+value = 15.0
+unit = "km"
+min = 0.1
+max = 150
+description = "Middle proximity context band, strictly above the inner band."
+
+[simulation.fire_risk_outer_km]
+value = 25.0
+unit = "km"
+min = 0.1
+max = 200
+description = "Outer proximity context band, strictly above the middle band."
+
+[simulation.fire_risk_ring_points]
+value = 72
+unit = "points"
+min = 32
+max = 360
+description = "Vertices used in each generated geodesic ring."
+
+[simulation.fire_risk_wind_shape_scale]
+value = 0.04
+unit = "per m/s"
+min = 0.0
+max = 1.0
+description = "Wind-informed context elongation per meter per second; not a calibrated spread rate."
+
+[simulation.fire_risk_max_wind_stretch]
+value = 2.0
+unit = "ratio"
+min = 1.0
+max = 3.0
+description = "Maximum illustrative downwind elongation of the context overlay."
+
+[simulation.fire_risk_weather_max_age_seconds]
+value = 7200
+unit = "seconds"
+min = 60
+max = 86400
+description = "Oldest measured DTN observation accepted for a new landscape scenario; stale readings never produce substitute geometry."
+
+[simulation.fire_risk_weather_max_distance_km]
+value = 2.0
+unit = "km"
+min = 0.0
+max = 25.0
+description = "Maximum separation between a retained weather query coordinate and an observed fire."
+
+[simulation.fire_risk_surface_fuel_model]
+value = 1
+unit = "Anderson model"
+min = 1
+max = 13
+description = "Assumed homogeneous surface fuel model for the explicitly illustrative timed scenario."
+
+[simulation.fire_risk_surface_first_minutes]
+value = 15.0
+unit = "minutes"
+min = 1.0
+max = 120.0
+description = "First surface-fire scenario horizon."
+
+[simulation.fire_risk_surface_second_minutes]
+value = 30.0
+unit = "minutes"
+min = 1.0
+max = 120.0
+description = "Second surface-fire scenario horizon, strictly above the first."
+
+[simulation.fire_risk_surface_third_minutes]
+value = 60.0
+unit = "minutes"
+min = 1.0
+max = 120.0
+description = "Third surface-fire scenario horizon, strictly above the second."
+
+[simulation.fire_risk_surface_moisture_profile]
+value = "moderate"
+unit = "profile"
+allowed = ["low", "moderate", "high"]
+description = "Assumed dead and live fuel moisture preset for the illustrative surface-fire scenario; humidity is never substituted for fuel moisture."
+
+[capacity.fire_risk_landscape_request_max_kib]
+value = 3072
+unit = "KiB"
+min = 1024
+max = 4096
+description = "Bounded sealed numerical request: at most 250000 cells with int16 fuel and float32 elevation, zlib/base64 encoded, plus manifest."
+
+[capacity.fire_risk_landscape_calculation_timeout_seconds]
+value = 0
+unit = "seconds"
+min = 0
+max = 3600
+description = "Zero removes application wall deadlines from bounded numerical work. The durable worker renews its lease; cell, directional and concurrency bounds constrain work."
+
+[capacity.fire_risk_landscape_acquisition_timeout_seconds]
+value = 0
+unit = "seconds"
+min = 0
+max = 3600
+description = "Zero removes the total LANDFIRE acquisition wall deadline; finite connect/read idle waits, source bytes, numerical dimensions and renewed leases remain bounded."
+
+[capacity.fire_risk_landscape_source_max_mib]
+value = 8
+unit = "MiB"
+min = 2
+max = 16
+description = "Maximum bytes of each numeric LANDFIRE crop response. The largest permitted 500 by 500 float32 crop has one MiB of samples; reserve bounded TIFF metadata overhead."
+
+[simulation.fire_risk_landscape_max_cells]
+value = 250000
+unit = "cells"
+min = 10000
+max = 250000
+description = "Maximum 30-metre aligned terrain/fuel cells, matching the pure model contract and bounded private request."
+
+[simulation.fire_risk_landscape_initial_radius_m]
+value = 1500.0
+unit = "metres"
+min = 300.0
+max = 7470.0
+description = "Initial crop centred on each reported fire, including a two-cell halo. Expand the same canonical products only if the modeled front reaches its domain edge."
+
+[simulation.fire_risk_landscape_directional_radius]
+value = 5
+unit = "cells"
+min = 1
+max = 5
+description = "Directional stencil radius, validated by native ellipse and spatial/angular convergence tests; crossed cells prevent jumping nonburnable barriers."
+
+[simulation.osm_source_http_timeout_seconds]
+value = 0
+unit = "seconds"
+min = 0
+max = 3600
+description = "Zero removes application socket waits for immutable regional OSM delivery; renewable job lease, explicit cancellation, byte and disk bounds remain enforced."
+
+[simulation.road_preparation_timeout_seconds]
+value = 0
+unit = "seconds"
+min = 0
+max = 3600
+description = "Zero removes the former 300-second subprocess wall cap. Worker cancellation and renewable leases control extraction and conversion."
+
+[simulation.osm_source_max_mib]
+value = 4096
+unit = "MiB"
+min = 512
+max = 16384
+description = "Maximum exact regional PBF size accepted before download; dynamic regional selection avoids a whole-US download."
+
+[cache.osm_source_cache_mib_per_worker]
+value = 8192
+unit = "MiB"
+min = 512
+max = 16384
+description = "Regional source cache budget within 30 GiB scratch, separate from the 4 GiB derived network cache; exact free disk is checked before downloading."
+
+[cache.osm_index_cache_seconds]
+value = 86400
+unit = "seconds"
+min = 3600
+max = 86400
+description = "Reuse the publisher regional index for its daily publication interval; every new job resolves a dated immutable source and never substitutes an older snapshot on resolution failure."
+
+[simulation.osm_road_xml_max_mb]
+value = 50
+unit = "MB"
+min = 1
+max = 100
+description = "Maximum bounded extracted OSM XML consumed by netconvert; distinct from the regional PBF source size."
+
+[simulation.osm_source_max_attempts]
+value = 3
+unit = "attempts"
+min = 1
+max = 5
+description = "Total public OSM read attempts; frozen source identity and cancellation apply to every attempt."
+
+[simulation.osm_source_retry_max_seconds]
+value = 10
+unit = "seconds"
+min = 1
+max = 60
+description = "Maximum public OSM transient recovery delay, including Retry-After."
+
+[capacity.artifact_write_max_attempts]
+value = 3
+unit = "attempts"
+min = 1
+max = 5
+description = "Total attempts to persist frozen simulation artifacts without recapturing paid inputs."
+
+[capacity.dtn_operation_timeout_seconds]
+value = 100
+unit = "seconds"
+min = 10
+max = 150
+description = "Aggregate DTN adapter budget, clamped to Lambda remaining time; earlier point results are retained."
+
+[capacity.dtn_request_timeout_seconds]
+value = 15
+unit = "seconds"
+min = 1
+max = 30
+description = "Maximum one DTN authentication or provider request wait within the aggregate budget."
+
+[capacity.dtn_max_attempts]
+value = 2
+unit = "attempts"
+min = 1
+max = 3
+description = "Total attempts per DTN authentication or read, bounded by the aggregate deadline."
+
+[capacity.dtn_serialization_reserve_seconds]
+value = 3
+unit = "seconds"
+min = 1
+max = 10
+description = "Lambda time reserved for safe DTN result serialization."
+
+[capacity.fire_risk_landscape_idle_timeout_seconds]
+value = 30
+unit = "seconds"
+min = 1
+max = 120
+description = "Finite LANDFIRE connect and read idle wait; distinct from an allowed long acquisition."
+
+[capacity.fire_risk_landscape_max_attempts]
+value = 3
+unit = "attempts"
+min = 1
+max = 5
+description = "Durably counted canonical landscape acquisition attempts per aligned crop window."
+
+[capacity.fire_risk_retry_max_seconds]
+value = 10
+unit = "seconds"
+min = 1
+max = 60
+description = "Maximum terrain source or calculator admission recovery delay, including Retry-After."
+
+[capacity.fire_risk_model_admission_seconds]
+value = 120
+unit = "seconds"
+min = 10
+max = 600
+description = "Total calculator admission budget per sealed input, distinct from numerical execution time."

@@ -1,0 +1,15 @@
+.forecast-section { display:grid; gap:8px; min-width:0; color:var(--ink,#21383d); }
+.forecast-section .accordion.forecast { background:var(--surface,#fff); border-color:var(--line,#d9e3e2); }
+.forecast-section .accordion-title-text, .forecast-section .accordion-toggle { color:var(--ink,#21383d); }
+.forecast-section .accordion .accordion-header { flex-wrap:wrap; gap:8px; padding:12px; background:transparent; color:var(--ink,#21383d); border:0; }
+.forecast-section .accordion-title { min-width:0; }
+.forecast-section .accordion-content { background:#f4f8f7; border-color:var(--line,#d9e3e2); padding:12px; }
+.forecast-section .temp-range-badge { background:#e5eeea; color:#285653; border-radius:12px; padding:4px 8px; font-size:12px; }
+.forecast-periods-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr)); gap:10px; }
+.period-card-compact { background:var(--surface,#fff); border:1px solid var(--line,#d9e3e2); border-radius:8px; padding:12px; min-width:0; }
+.period-time-compact { color:var(--ink,#21383d); font-weight:650; margin-bottom:8px; }
+.forecast-section .period-metrics-compact { margin:0; display:grid; grid-template-columns:minmax(0,1fr); gap:8px; }
+.period-metrics-compact .metric-compact { display:flex; justify-content:space-between; gap:8px; font-size:13px; }
+.metric-compact dt, .weather-desc-compact { color:var(--muted,#526b6b); }
+.metric-compact dd { margin:0; color:var(--ink,#21383d); font-weight:600; }
+.forecast-section .weather-desc-compact { font-size:13px; margin:10px 0 0; }

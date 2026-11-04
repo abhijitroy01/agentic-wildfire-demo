@@ -1,0 +1,1 @@
+"""FireGUard investigation tests package."""

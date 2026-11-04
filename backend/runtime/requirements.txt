@@ -1,0 +1,47 @@
+# AgentCore Runtime Requirements
+# Agent/streaming SDK versions verified on 2026-09-25.
+# Rerun backend/runtime/tests (python -m pytest backend/runtime/tests) when upgrading these versions.
+# Every pin equals requirements-lock.txt; deployment/check_lockfiles.py fails on a mismatch.
+# List only packages that Runtime code or its in-image release checks import; the lock pins the rest.
+
+# Core AgentCore SDK (with AG-UI extras: bedrock-agentcore[ag-ui])
+bedrock-agentcore[ag-ui]==1.23.1
+
+# AG-UI protocol bindings for Strands
+ag-ui-strands==0.4.0
+ag-ui-protocol==1.0.0
+
+# Agent frameworks (with OTEL support for observability)
+strands-agents[otel]==1.56.0
+mcp==1.28.1
+
+# FastAPI for AG-UI HTTP/SSE endpoint
+fastapi==0.141.1
+# Imported directly by wfm_agui_entrypoint.py to start and stop the MCP client off the event loop
+anyio==4.15.1
+
+# AWS SDK
+boto3==1.43.97
+botocore==1.43.97
+
+# Environment management
+python-dotenv==1.2.2
+
+# YAML parsing: the in-image release check reads the Gateway template (deployment/validate_infra_baseline.py)
+pyyaml==6.0.3
+
+# JSON and data handling
+pydantic==2.13.5
+
+# HTTP client for the Gateway token request and MCP transport (utils/mcp_client.py)
+httpx==0.28.1
+
+# AWS Distro for OpenTelemetry (ADOT) - Required for AgentCore observability
+aws-opentelemetry-distro==0.20.0
+
+# Web framework dependencies (required by bedrock-agentcore)
+starlette==1.6.0
+uvicorn==0.53.0
+
+# The Dockerfile's build stage installs the schema model generator (datamodel-code-generator); the
+# runtime stage receives only its output.

@@ -1,0 +1,672 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Wildfire Backend - AgentCore Resources Stack (Gateway, Runtime, Targets, CodeBuild)
+
+Parameters:
+  AssetPrefix:
+    Type: String
+    Default: assets
+  ModelId:
+    Type: String
+  ReportModelId:
+    Type: String
+  RuntimeImageTag:
+    Type: String
+    Default: not-deployed
+  PublicDemoKnowledgeBaseId:
+    Type: String
+    Default: ""
+    AllowedPattern: "^$|^[A-Z0-9]{10}$"
+  GeocodeServiceArn:
+    Type: String
+  WildfireServiceArn:
+    Type: String
+  SimulationServiceArn:
+    Type: String
+    Default: ""
+  SimulationInternalUrl:
+    Type: String
+    Default: ""
+  SimulationContextSecretArn:
+    Type: String
+    Default: ""
+  Environment:
+    Type: String
+    Description: Environment name
+
+  ParentStackName:
+    Type: String
+    Description: Name of the parent CloudFormation stack (used for resource naming)
+
+  ProjectName:
+    Type: String
+    Description: Project name for tagging
+
+  DeployRuntime:
+    Type: String
+    Description: Whether to deploy the Runtime
+    Default: "false"
+    AllowedValues:
+      - "true"
+      - "false"
+
+  RuntimeSourceBucket:
+    Type: String
+    Description: S3 bucket for runtime source code
+
+  RuntimeECRRepositoryName:
+    Type: String
+    Description: ECR Repository Name
+
+  RuntimeExecutionRoleArn:
+    Type: String
+    Description: Runtime Execution Role ARN
+
+  GatewayExecutionRoleArn:
+    Type: String
+    Description: Gateway Execution Role ARN
+
+  VoiceMessageBucketName:
+    Type: String
+    Description: Voice Message Bucket Name
+
+  ReportImagesBucketName:
+    Type: String
+    Description: Report Images Bucket Name
+
+  # Outputs from Lambda Functions Stack
+  WeatherDTNServiceArn:
+    Type: String
+    Description: Weather DTN Service Lambda ARN
+
+  # Outputs from Cognito Stack
+  CognitoUserPoolId:
+    Type: String
+    Description: Cognito User Pool ID
+
+  CognitoClientId:
+    Type: String
+    Description: Cognito Client ID
+
+  GatewayClientSecretArn:
+    Type: String
+    Description: Secrets Manager secret ARN holding the gateway client secret; the Runtime reads it by this ARN
+
+  CognitoTokenEndpoint:
+    Type: String
+    Description: Cognito Token Endpoint
+
+  # Outputs from Bedrock Guardrails Stack (no defaults: the runtime refuses to start without both)
+  GuardrailId:
+    Type: String
+    Description: Bedrock Guardrail ID that every agent model uses (DEPLOYED_GuardrailId)
+
+  GuardrailVersion:
+    Type: String
+    Description: Published Bedrock Guardrail version number (DEPLOYED_GuardrailVersion); DRAFT is not accepted
+    AllowedPattern: "^[1-9][0-9]{0,7}$"
+
+  # Output from Infrastructure Stack
+  StackEncryptionKeyArn:
+    Type: String
+    Description: Customer-managed KMS key ARN of the stack; encrypts the runtime image build project and the gateway client secret
+
+Conditions:
+  HasPublicKnowledgeBase: !Not [!Equals [!Ref PublicDemoKnowledgeBaseId, ""]]
+  SimulationEnabled: !Not [!Equals [!Ref SimulationInternalUrl, ""]]
+  ShouldDeployRuntime: !Equals
+    - !Ref DeployRuntime
+    - "true"
+
+Resources:
+  CommunicationDraftAccess:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: OwnedCommunicationDrafts
+      Roles: [!Select [1, !Split ["/", !Ref RuntimeExecutionRoleArn]]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: [polly:SynthesizeSpeech, translate:TranslateText]
+            Resource: "*"
+          - Effect: Allow
+            Action: [s3:PutObject, s3:GetObject]
+            Resource: !Sub arn:${AWS::Partition}:s3:::${VoiceMessageBucketName}/voice-messages/*
+  RuntimeMemoryAccess:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ScopedConversationMemory
+      Roles: [!Select [1, !Split ["/", !Ref RuntimeExecutionRoleArn]]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - bedrock-agentcore:GetMemory
+              - bedrock-agentcore:CreateEvent
+              - bedrock-agentcore:GetEvent
+              - bedrock-agentcore:ListEvents
+              - bedrock-agentcore:DeleteEvent
+              - bedrock-agentcore:RetrieveMemoryRecords
+              - bedrock-agentcore:ListMemoryRecords
+            Resource: !GetAtt AgentCoreMemory.MemoryArn
+  PublicProcedureAccess:
+    Type: AWS::IAM::Policy
+    Condition: HasPublicKnowledgeBase
+    Properties:
+      PolicyName: PublicDemonstrationProcedureRead
+      Roles: [!Select [1, !Split ["/", !Ref RuntimeExecutionRoleArn]]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: bedrock:Retrieve
+            Resource: !Sub arn:aws:bedrock:${AWS::Region}:${AWS::AccountId}:knowledge-base/${PublicDemoKnowledgeBaseId}
+  SimulationGatewayInvokePolicy:
+    Type: AWS::IAM::Policy
+    Condition: SimulationEnabled
+    Properties:
+      PolicyName: InvokeSimulationAdapter
+      Roles: [!Select [1, !Split ["/", !Ref GatewayExecutionRoleArn]]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: lambda:InvokeFunction
+            Resource: !Ref SimulationServiceArn
+  SimulationRuntimeSecretPolicy:
+    Type: AWS::IAM::Policy
+    Condition: SimulationEnabled
+    Properties:
+      PolicyName: VerifySimulationServiceContext
+      Roles: [!Select [1, !Split ["/", !Ref RuntimeExecutionRoleArn]]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource: !Ref SimulationContextSecretArn
+  # The Runtime reads the gateway client secret by ARN when its Gateway client starts; the stack key decrypts
+  # it only through Secrets Manager.
+  RuntimeGatewayClientSecretAccess:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ReadGatewayClientSecret
+      Roles: [!Select [1, !Split ["/", !Ref RuntimeExecutionRoleArn]]]
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: secretsmanager:GetSecretValue
+            Resource: !Ref GatewayClientSecretArn
+          - Effect: Allow
+            Action: kms:Decrypt
+            Resource: !Ref StackEncryptionKeyArn
+            Condition:
+              StringEquals:
+                kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com
+  SimulationServiceTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    Condition: SimulationEnabled
+    DependsOn: SimulationGatewayInvokePolicy
+    Properties:
+      GatewayIdentifier: !GetAtt AgentCoreGateway.GatewayIdentifier
+      Name: simulation-service
+      Description: Bounded evacuation and crew-access simulation tools
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !Ref SimulationServiceArn
+            ToolSchema:
+              InlinePayload:
+                - Name: prepare_simulation
+                  Description: Prepare a current-input draft.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      payload:
+                        Type: string
+                        Description: JSON object validated by the canonical simulator contract
+                      trusted_context:
+                        Type: string
+                        Description: Hidden signed service context
+                    Required: [payload, trusted_context]
+                - Name: submit_simulation
+                  Description: Submit an authorized draft idempotently.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      payload:
+                        Type: string
+                        Description: JSON object validated by the canonical simulator contract
+                      trusted_context:
+                        Type: string
+                        Description: Hidden signed service context
+                    Required: [payload, trusted_context]
+                - Name: get_simulation_status
+                  Description: Read run status.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      payload:
+                        Type: string
+                        Description: JSON object validated by the canonical simulator contract
+                      trusted_context:
+                        Type: string
+                        Description: Hidden signed service context
+                    Required: [payload, trusted_context]
+                - Name: get_simulation_evidence
+                  Description: Read bounded deterministic evidence.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      payload:
+                        Type: string
+                        Description: JSON object validated by the canonical simulator contract
+                      trusted_context:
+                        Type: string
+                        Description: Hidden signed service context
+                    Required: [payload, trusted_context]
+                - Name: create_simulation_variant
+                  Description: Prepare a frozen-input controlled variant.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      payload:
+                        Type: string
+                        Description: JSON object validated by the canonical simulator contract
+                      trusted_context:
+                        Type: string
+                        Description: Hidden signed service context
+                    Required: [payload, trusted_context]
+  # ============================================================================
+  # AgentCore Memory
+  # ============================================================================
+
+  AgentCoreMemory:
+    Type: AWS::BedrockAgentCore::Memory
+    # CRITICAL: Preserve memory data across stack updates/deletes
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      # NOTE: Memory name must match pattern ^[a-zA-Z][a-zA-Z0-9_]{0,47}$
+      # No hyphens allowed - using underscores and ProjectName instead of ParentStackName
+      Name: !Sub "${ProjectName}_Memory"
+      Description: !Sub "Memory for ${ProjectName} supervisor agent - SessionManager pattern"
+      EventExpiryDuration: 30 # 30 days (per AWS Memory best practices)
+      Tags:
+        Project: !Ref ProjectName
+        Environment: !Ref Environment
+        Component: Memory
+        ManagedBy: CloudFormation
+
+  # ============================================================================
+  # CodeBuild for Runtime Container
+  # ============================================================================
+
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # Fixed name (D52): BuildSource's policy names this role. A change that replaces it fails while the old role
+      # holds the name; change the name here, in stacks.ts and in BuildSource's list together.
+      RoleName: !Sub ${ParentStackName}-runtime-build
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: RuntimeImageBuild
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: [logs:CreateLogGroup, logs:CreateLogStream, logs:PutLogEvents]
+                Resource: !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${ParentStackName}-runtime-build-${AWS::Region}:*
+              - Effect: Allow
+                Action: [s3:GetObject, s3:GetObjectVersion]
+                Resource: !Sub arn:${AWS::Partition}:s3:::${RuntimeSourceBucket}/releases/*
+              - Effect: Allow
+                Action: [s3:GetBucketLocation, s3:GetBucketAcl]
+                Resource: !Sub arn:${AWS::Partition}:s3:::${RuntimeSourceBucket}
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Effect: Allow
+                Action: [ecr:BatchCheckLayerAvailability, ecr:InitiateLayerUpload, ecr:UploadLayerPart, ecr:CompleteLayerUpload, ecr:PutImage, ecr:BatchGetImage, ecr:GetDownloadUrlForLayer]
+                Resource: !Sub arn:${AWS::Partition}:ecr:${AWS::Region}:${AWS::AccountId}:repository/${RuntimeECRRepositoryName}
+              # The build project encrypts its build output with the stack key (EncryptionKey below).
+              - Effect: Allow
+                Action: [kms:Decrypt, kms:Encrypt, kms:ReEncrypt*, kms:GenerateDataKey*, kms:DescribeKey]
+                Resource: !Ref StackEncryptionKeyArn
+
+  RuntimeContainerBuildProject:
+    Type: AWS::CodeBuild::Project
+    DependsOn: CodeBuildServiceRole
+    Properties:
+      Name: !Sub ${ParentStackName}-runtime-build-${AWS::Region}
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      EncryptionKey: !Ref StackEncryptionKeyArn
+      TimeoutInMinutes: 45
+      QueuedTimeoutInMinutes: 15
+      Artifacts:
+        Type: NO_ARTIFACTS
+      # Opportunistic host-local layers only; verified release reuse never depends on a cache hit.
+      Cache:
+        Type: LOCAL
+        Modes: [LOCAL_DOCKER_LAYER_CACHE]
+      Environment:
+        Type: ARM_CONTAINER
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/amazonlinux2-aarch64-standard:3.0
+        PrivilegedMode: true
+        EnvironmentVariables:
+          - Name: AWS_DEFAULT_REGION
+            Value: !Ref AWS::Region
+          - Name: AWS_ACCOUNT_ID
+            Value: !Ref AWS::AccountId
+          - Name: IMAGE_REPO_NAME
+            Value: !Ref RuntimeECRRepositoryName
+          - Name: IMAGE_TAG
+            Value: deployment-required
+          - Name: RUNTIME_SOURCE_BUCKET
+            Value: !Ref RuntimeSourceBucket
+          - Name: ENVIRONMENT
+            Value: !Ref Environment
+      Source:
+        Type: S3
+        Location: !Sub ${RuntimeSourceBucket}/sources/deployment-required.zip
+        BuildSpec: |
+          version: 0.2
+          phases:
+            pre_build:
+              commands:
+                - echo "=== Pre-build Phase ==="
+                - echo "Logging in to Amazon ECR..."
+                - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+            build:
+              commands:
+                - echo "=== Build Phase - Building Docker Image ==="
+                - echo "Building Docker image for ARM64 architecture..."
+                - test -f schemas/api-schema.yaml
+                - docker build --platform linux/arm64 -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG .
+                - docker run --rm --network none --mount type=bind,source="$CODEBUILD_SRC_DIR/release-tests",target=/release-tests,readonly --entrypoint python $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG -P -m unittest discover -s /release-tests/backend/runtime/tests -t /release-tests/backend/runtime/tests -v
+                - docker run --rm --network none --entrypoint python $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG /app/check_startup.py
+            post_build:
+              commands:
+                - test "$CODEBUILD_BUILD_SUCCEEDING" = "1"
+                - docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
+                - echo "ARM64 image built and pushed"
+
+  # ============================================================================
+  # AgentCore Gateway (MCP Protocol)
+  # ============================================================================
+
+  AgentCoreGateway:
+    Type: AWS::BedrockAgentCore::Gateway
+    Properties:
+      Name: !Sub "${ParentStackName}-gateway"
+      Description: Wildfire Detection Gateway - Exposes weather and wildfire tools via MCP protocol
+      ProtocolType: MCP
+      AuthorizerType: CUSTOM_JWT
+      AuthorizerConfiguration:
+        CustomJWTAuthorizer:
+          DiscoveryUrl: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPoolId}/.well-known/openid-configuration
+          AllowedClients:
+            - !Ref CognitoClientId
+      RoleArn: !Ref GatewayExecutionRoleArn
+      # Note: SearchType cannot be changed on existing gateway with targets
+      # To enable SEMANTIC search, gateway must be deleted and recreated
+      Tags:
+        Project: !Ref ProjectName
+        Environment: !Ref Environment
+        Component: Gateway
+        ManagedBy: CloudFormation
+
+  # ============================================================================
+  # Gateway Targets
+  # ============================================================================
+
+  WeatherDTNServiceTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    DependsOn: AgentCoreGateway
+    Properties:
+      GatewayIdentifier: !GetAtt AgentCoreGateway.GatewayIdentifier
+      Name: weather-dtn-service
+      Description: DTN Weather service - current conditions (multi-location) and forecasts (single location)
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !Ref WeatherDTNServiceArn
+            ToolSchema:
+              InlinePayload:
+                - Name: get_dtn_current_weather
+                  Description: Get current weather conditions for one or more locations. Supports batch processing. Includes wildfire parameters like hotDryWindyIndex.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      locations:
+                        Type: array
+                        Description: Array of 1-50 location coordinates
+                        Items:
+                          Type: object
+                          Properties:
+                            latitude:
+                              Type: number
+                              Description: Latitude coordinate
+                            longitude:
+                              Type: number
+                              Description: Longitude coordinate
+                          Required:
+                            - latitude
+                            - longitude
+                      units:
+                        Type: string
+                        Description: Always use us-std (Fahrenheit, mph, inches). Omit to use this default.
+                    Required:
+                      - locations
+                - Name: get_dtn_forecast
+                  Description: Get six-hour weather forecast periods for a single location up to 15 days. Lambda calculates dates from forecastDays. Hot dry windy index is available only in current conditions.
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      latitude:
+                        Type: number
+                        Description: Latitude coordinate
+                      longitude:
+                        Type: number
+                        Description: Longitude coordinate
+                      forecastDays:
+                        Type: integer
+                        Description: Number of days to forecast (1-15). Lambda calculates startTime=tomorrow and endTime=tomorrow+forecastDays.
+                      units:
+                        Type: string
+                        Description: Always use us-std (Fahrenheit, mph, inches). Omit to use this default.
+                    Required:
+                      - latitude
+                      - longitude
+                      - forecastDays
+
+  GeocodeServiceTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    DependsOn: AgentCoreGateway
+    Properties:
+      GatewayIdentifier: !GetAtt AgentCoreGateway.GatewayIdentifier
+      Name: geocode-service
+      Description: Amazon Location forward geocoding with stored-result rights
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !Ref GeocodeServiceArn
+            ToolSchema:
+              InlinePayload:
+                - Name: geocode_address
+                  Description: Amazon Location forward geocoding with stored-result rights
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      address:
+                        Type: string
+                    Required:
+                      - address
+
+  WildfireServiceTarget:
+    Type: AWS::BedrockAgentCore::GatewayTarget
+    DependsOn: AgentCoreGateway
+    Properties:
+      GatewayIdentifier: !GetAtt AgentCoreGateway.GatewayIdentifier
+      Name: wildfire-service
+      Description: Bounded read-only query of the public ArcGIS wildfire feed
+      CredentialProviderConfigurations:
+        - CredentialProviderType: GATEWAY_IAM_ROLE
+      TargetConfiguration:
+        Mcp:
+          Lambda:
+            LambdaArn: !Ref WildfireServiceArn
+            ToolSchema:
+              InlinePayload:
+                - Name: queryWildfires
+                  Description: Bounded read-only query of the public ArcGIS wildfire feed
+                  InputSchema:
+                    Type: object
+                    Properties:
+                      geometry:
+                        Type: string
+                      distance:
+                        Type: number
+                      geometryType:
+                        Type: string
+                      inSR:
+                        Type: integer
+                      outSR:
+                        Type: integer
+                      units:
+                        Type: string
+                      outFields:
+                        Type: string
+                      where:
+                        Type: string
+                      returnGeometry:
+                        Type: boolean
+                      f:
+                        Type: string
+                    Required:
+                      - geometry
+                      - distance
+
+  # ============================================================================
+  # AgentCore Runtime (Conditional)
+  # ============================================================================
+
+  AgentCoreRuntime:
+    Type: AWS::BedrockAgentCore::Runtime
+    Condition: ShouldDeployRuntime
+    DependsOn:
+      - AgentCoreGateway
+      - AgentCoreMemory
+      - RuntimeMemoryAccess
+      - RuntimeGatewayClientSecretAccess
+    Properties:
+      AgentRuntimeName: !Sub ${ProjectName}_supervisor
+      Description: !Sub "Wildfire Management Supervisor Agent - ${Environment}"
+      RoleArn: !Ref RuntimeExecutionRoleArn
+      NetworkConfiguration:
+        NetworkMode: PUBLIC
+      ProtocolConfiguration: HTTP
+      AgentRuntimeArtifact:
+        ContainerConfiguration:
+          ContainerUri: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${RuntimeECRRepositoryName}:${RuntimeImageTag}
+      EnvironmentVariables:
+        # CloudFormation-managed variables. aws-opentelemetry-distro reports ENVIRONMENT as the
+        # deployment environment; every Runtime AWS client takes its Region from DEPLOYED_DeploymentRegion.
+        ENVIRONMENT: !Ref Environment
+        DEPLOYED_DeploymentRegion: !Ref AWS::Region
+        DEPLOYED_RuntimeBuild: !Ref RuntimeImageTag
+        AGENT_OBSERVABILITY_ENABLED: "true"
+
+        # Gateway MCP Client Configuration. The client secret is passed only as its Secrets Manager ARN;
+        # utils/mcp_client.py reads the value when the Gateway client starts.
+        DEPLOYED_GatewayUrl: !GetAtt AgentCoreGateway.GatewayUrl
+        DEPLOYED_CognitoClientId: !Ref CognitoClientId
+        DEPLOYED_CognitoClientSecretArn: !Ref GatewayClientSecretArn
+        DEPLOYED_CognitoTokenEndpoint: !Ref CognitoTokenEndpoint
+
+        SIMULATION_CONTEXT_SECRET_ARN: !Ref SimulationContextSecretArn
+        SIMULATION_MODEL_ID: !Ref ModelId
+
+        # Agent-Specific Model Configuration (Global CRIS - portable across regions/accounts). Every
+        # agent's output budget is a code constant (utils/model_config.py MAX_TOKENS).
+        SUPERVISOR_MODEL_ID: !Ref ModelId
+        DETECTION_MODEL_ID: !Ref ModelId
+        RESPONSE_MODEL_ID: !Ref ModelId
+        COMM_MODEL_ID: !Ref ModelId
+        VOICE_MESSAGE_S3_BUCKET: !Ref VoiceMessageBucketName
+
+        # Firetruck report agent model
+        REPORT_MODEL_ID: !Ref ReportModelId
+
+        # Shared Model Parameters
+        MODEL_TEMPERATURE: "0.3"
+
+        # Knowledge Base Configuration
+        PUBLIC_DEMO_KNOWLEDGE_BASE_ID: !Ref PublicDemoKnowledgeBaseId
+
+        # Bedrock Guardrail applied to every agent model (utils/model_config.py settings());
+        # the version is the published number from 5-bedrock-guardrails.yaml, never DRAFT.
+        DEPLOYED_GuardrailId: !Ref GuardrailId
+        DEPLOYED_GuardrailVersion: !Ref GuardrailVersion
+
+        # AgentCore Memory Configuration (SessionManager pattern)
+        DEPLOYED_MemoryId: !GetAtt AgentCoreMemory.MemoryId
+      Tags:
+        Project: !Ref ProjectName
+        Environment: !Ref Environment
+        Component: Runtime
+        ManagedBy: CloudFormation
+
+Outputs:
+  # Gateway
+  GatewayArn:
+    Description: AgentCore Gateway ARN
+    Value: !GetAtt AgentCoreGateway.GatewayArn
+
+  GatewayUrl:
+    Description: AgentCore Gateway URL
+    Value: !GetAtt AgentCoreGateway.GatewayUrl
+
+  GatewayIdentifier:
+    Description: AgentCore Gateway Identifier
+    Value: !GetAtt AgentCoreGateway.GatewayIdentifier
+
+  # Runtime (Conditional)
+  RuntimeArn:
+    Condition: ShouldDeployRuntime
+    Description: AgentCore Runtime ARN
+    Value: !GetAtt AgentCoreRuntime.AgentRuntimeArn
+
+  RuntimeId:
+    Condition: ShouldDeployRuntime
+    Description: AgentCore Runtime ID
+    Value: !GetAtt AgentCoreRuntime.AgentRuntimeId
+
+  # CodeBuild
+  CodeBuildProjectName:
+    Description: CodeBuild Project Name
+    Value: !Ref RuntimeContainerBuildProject
+
+  # Memory
+  MemoryId:
+    Description: AgentCore Memory ID for SessionManager
+    Value: !GetAtt AgentCoreMemory.MemoryId
+
+  MemoryArn:
+    Description: AgentCore Memory ARN
+    Value: !GetAtt AgentCoreMemory.MemoryArn

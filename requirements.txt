@@ -1,0 +1,22 @@
+# Root-level requirements for the shared local development virtual environment.
+# Component manifests remain the source of truth for deployed runtimes; this
+# aggregator installs every Python component and the shared development tools.
+# requirements-lock.txt supplies exact reviewed versions during bootstrap.
+
+# Backend runtime, gateway, and deployment tooling
+-r backend/runtime/requirements.txt
+-r backend/gateway/weather/requirements-dtn.txt
+-r backend/deployment/requirements.txt
+
+# Radio (Broadcastify) service
+-r broadcastify/monitor/requirements.txt
+
+# Simulators and application API
+-r firetruck-simulator/requirements.txt
+-r traffic-simulator/requirements.txt
+-r traffic-simulator/requirements-sumo.txt
+-r backend/requirements-api.txt
+-r fire-risk-modeler/requirements.txt
+
+# Local development and test tooling
+-r requirements-dev.txt

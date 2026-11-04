@@ -1,0 +1,87 @@
+# FireGUard workspace API (simulation v1, brokers, Traffic Lab routes). No SUMO binaries:
+# simulation work runs in the traffic-simulator worker image.
+# Build from the repository root: docker build -f backend/Dockerfile.api --target runtime .
+# Verification consumes the worker verification image built earlier by the release gate.
+
+ARG SUMO_VERIFY_IMAGE=wildfire-traffic-verification
+FROM ${SUMO_VERIFY_IMAGE} AS sumo-test-tools
+
+FROM public.ecr.aws/docker/library/node:22-bookworm-slim AS ui-metrics
+# Only the locked TypeScript compiler is needed to evaluate the UI metric modules.
+WORKDIR /opt/app/ui
+COPY ui/package.json ui/package-lock.json ./
+RUN npm ci --ignore-scripts --no-audit --no-fund
+COPY ui/scripts/ ./scripts/
+COPY ui/src/features/evacuation/components/ ./src/features/evacuation/components/
+COPY ui/src/shared/utils/typeGuards.ts ./src/shared/utils/typeGuards.ts
+COPY ui/src/features/firetruck/utils/truckDisplayUtils.ts ./src/features/firetruck/utils/truckDisplayUtils.ts
+RUN node --test scripts/test/policy-metrics.test.cjs
+
+FROM public.ecr.aws/docker/library/python:3.14-slim-trixie AS base
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /opt/app
+COPY requirements-lock.txt ./
+COPY traffic-simulator/requirements.txt ./traffic-simulator/
+COPY backend/requirements-api.txt ./backend/
+RUN pip install --constraint requirements-lock.txt \
+    --requirement traffic-simulator/requirements.txt --requirement backend/requirements-api.txt
+ENV PYTHONPATH=/opt/app/traffic-simulator:/opt/app/fire-risk-modeler:/opt/app
+# Operational settings: traffic_simulator.settings checks every limit variable against its declared range.
+COPY deployment/settings.toml ./deployment/
+COPY traffic-simulator/traffic_simulator/ ./traffic-simulator/traffic_simulator/
+COPY backend/*.py ./backend/
+COPY backend/investigation/*.py ./backend/investigation/
+COPY backend/evacuation/*.py ./backend/evacuation/
+COPY backend/traffic_lab/*.py ./backend/traffic_lab/
+# Source preparation runs in the durable API consumer; numerical/native calculation stays in the modeler.
+COPY fire-risk-modeler/fire_risk_modeler/__init__.py fire-risk-modeler/fire_risk_modeler/models.py \
+    fire-risk-modeler/fire_risk_modeler/landscape.py \
+    fire-risk-modeler/fire_risk_modeler/landscape_acquisition.py \
+    ./fire-risk-modeler/fire_risk_modeler/
+
+FROM base AS verification
+# Tests use the exact source-built headless engine already verified for the worker.
+COPY requirements-dev.txt pyproject.toml ./
+COPY traffic-simulator/requirements-sumo.txt ./traffic-simulator/
+COPY traffic-simulator/scripts/check_sumo_runtime.py ./traffic-simulator/scripts/
+RUN apt-get update && apt-get install -y --no-install-recommends \
+       libgomp1 libstdc++6 libsqlite3-0 zlib1g libexpat1 libbz2-1.0 liblz4-1 \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --constraint requirements-lock.txt --requirement requirements-dev.txt
+COPY --from=sumo-test-tools /opt/sumo/ /opt/sumo/
+RUN echo /opt/sumo/lib > /etc/ld.so.conf.d/fireguard-sumo.conf && ldconfig
+ENV SUMO_HOME=/opt/sumo PATH="/opt/sumo/bin:$PATH"
+RUN python traffic-simulator/scripts/check_sumo_runtime.py
+COPY --from=ui-metrics /usr/local/bin/node /usr/local/bin/node
+COPY --from=ui-metrics /opt/app/ui/ ./ui/
+COPY fire-risk-modeler/fire_risk_modeler/exposure.py fire-risk-modeler/fire_risk_modeler/geometry.py \
+    ./fire-risk-modeler/fire_risk_modeler/
+COPY fire-risk-modeler/tests/data/king-landscape.json ./fire-risk-modeler/tests/data/
+COPY backend/tests/ ./backend/tests/
+COPY backend/investigation/tests/ ./backend/investigation/tests/
+COPY backend/evacuation/tests/ ./backend/evacuation/tests/
+COPY backend/traffic_lab/tests/ ./backend/traffic_lab/tests/
+COPY scripts/export_integration_contracts.py ./scripts/
+COPY schemas/ ./schemas/
+COPY ui/src/features/evacuation/generated/ ./ui/src/features/evacuation/generated/
+COPY ui/src/features/fire-exposure/generated/ ./ui/src/features/fire-exposure/generated/
+COPY backend/runtime/agents/simulation_agent/tool-inputs.json ./backend/runtime/agents/simulation_agent/
+ENV REQUIRE_WEB_METRIC_PARITY=1
+RUN python scripts/export_integration_contracts.py --check \
+    && python -m pytest -q backend/tests backend/investigation/tests backend/evacuation/tests backend/traffic_lab/tests \
+    && ruff check backend/*.py backend/tests backend/investigation backend/evacuation backend/traffic_lab \
+        scripts/export_integration_contracts.py
+
+FROM base AS runtime
+RUN groupadd -g 10001 workspace && useradd -u 10001 -g 10001 -M workspace \
+    && chmod 1777 /tmp && mkdir /tmp/wildfire && chown 10001:10001 /tmp/wildfire
+VOLUME ["/tmp"]
+ENV DATA_DIR=/tmp/wildfire
+USER 10001:10001
+EXPOSE 8000
+# Container health check on the API's /health route (CKV_DOCKER_2); ECS applies the task definition's equal check.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3)" || exit 1
+CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]

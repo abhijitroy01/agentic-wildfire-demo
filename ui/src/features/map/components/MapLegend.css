@@ -1,0 +1,336 @@
+/**
+ * MapLegend styles
+ */
+
+/* Main Legend */
+.map-legend {
+  position: absolute;
+  bottom: var(--map-overlay-bottom, 96px);
+  right: 20px;
+  box-sizing: border-box;
+  width: min(280px, calc(50% - 30px));
+  max-height: var(--map-overlay-slot);
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  min-width: 0;
+  z-index: 50;
+}
+
+.map-legend h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  color: #000;
+}
+
+.legend-item span {
+  color: #000;
+}
+
+.legend-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.legend-icon.location-icon {
+  background-color: rgba(0, 122, 255, 0.8);
+  border: 2px solid white;
+}
+
+.legend-icon.fire-icon {
+  width: 12px;
+  height: 12px;
+  background-color: rgba(255, 69, 0, 0.9);
+  border: 1px solid #8B0000;
+  margin-right: 10px;
+}
+
+.legend-icon.exposure-icon {
+  border-radius: 3px;
+  background: rgb(234 88 12 / 25%);
+  border: 1px solid #c2410c;
+}
+
+.legend-icon.scenario-icon {
+  border-radius: 3px;
+  background: rgb(220 38 38 / 18%);
+  border: 2px solid #b91c1c;
+}
+
+.legend-icon.scenario-contour-icon {
+  border-radius: 2px;
+  border: 2px solid;
+}
+
+.legend-icon.reported-perimeter-icon {
+  border-radius: 2px;
+  border: 2px dashed #172554;
+  background: transparent;
+}
+
+.scenario-legend {
+  border-top: 1px solid #d9e3e2;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.scenario-legend-title {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: #21383d;
+}
+
+.scenario-legend-note {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #526b6b;
+}
+
+/* Wind Legend */
+.wind-legend {
+  position: absolute;
+  bottom: var(--map-overlay-bottom, 96px);
+  left: 20px;
+  box-sizing: border-box;
+  width: min(250px, calc(50% - 30px));
+  max-height: var(--map-overlay-slot);
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  font-size: 12px;
+  min-width: 0;
+  z-index: 50;
+}
+
+.wind-legend .accordion {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.wind-legend .accordion .accordion-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  color: #21383d;
+  background: #fff;
+}
+
+.wind-legend .accordion-title-text {
+  color: #21383d;
+  font-size: 12px;
+}
+
+.wind-legend .accordion-content {
+  padding: 10px 0 0;
+  background: transparent;
+}
+
+.wind-legend h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #333;
+}
+
+.wind-speed-scale {
+  margin-bottom: 10px;
+}
+
+.wind-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 3px;
+  color: #000;
+}
+
+.wind-item span {
+  color: #000;
+}
+
+.wind-arrow {
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 12px solid;
+  margin-right: 8px;
+  transform: rotate(0deg);
+}
+
+.wind-legend-footer {
+  border-top: 1px solid #ddd;
+  padding-top: 8px;
+  font-size: 11px;
+  color: #666;
+}
+
+.wind-legend-footer div {
+  margin-bottom: 2px;
+}
+
+/* Fire Response Units Legend: a light card around the shared Accordion, collapsed to its compact toggle by default.
+   The toggle and the content carry the padding, so the card stays at most 224px wide. */
+.response-units-legend {
+  position: absolute;
+  top: var(--map-overlay-top, 96px);
+  right: 20px;
+  box-sizing: border-box;
+  width: min(224px, calc(50% - 30px));
+  max-height: var(--map-overlay-slot);
+  overflow: auto;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-family: 'Arial', sans-serif;
+  font-size: 13px;
+  z-index: 10;
+}
+
+/* Visible overflow keeps the toggle's focus ring unclipped. */
+.response-units-legend .accordion {
+  margin: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  overflow: visible;
+}
+
+/* Three classes outrank the workspace's filled button style. */
+.response-units-legend .accordion .accordion-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 13px;
+  white-space: normal;
+}
+
+.response-units-legend .accordion .accordion-header:hover {
+  background: #f3f4f6;
+}
+
+/* Keep the keyboard ring inside the scrolling cards' visible bounds. */
+:is(.fire-exposure-summary, .wind-legend, .response-units-legend) .accordion-header:focus-visible {
+  outline-offset: -3px;
+}
+
+.response-units-legend .accordion-title {
+  gap: 6px;
+}
+
+.response-units-legend .accordion-title-text {
+  color: #1f2937;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.response-units-legend .accordion .accordion-toggle,
+.response-units-legend .accordion.expanded .accordion-toggle {
+  width: auto;
+  color: #4b5563;
+}
+
+.response-units-legend .accordion-content {
+  padding: 10px 12px 12px;
+  border-top: 1px solid #e5e7eb;
+  background: transparent;
+}
+
+.response-units-legend .legend-section {
+  margin-bottom: 12px;
+}
+
+.response-units-legend .legend-section:last-child {
+  margin-bottom: 0;
+}
+
+.response-units-legend h5 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+}
+
+.response-units-legend .legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.response-units-legend .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #333;
+}
+
+.response-units-legend .unit-icon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+.response-units-legend .status-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .wind-legend {
+    bottom: var(--map-overlay-bottom, 96px);
+    left: 10px;
+    right: auto;
+    min-width: auto;
+    width: min(250px, calc(50% - 20px));
+    padding: 10px;
+  }
+  
+  .map-legend {
+    bottom: var(--map-overlay-bottom, 96px);
+    right: 10px;
+    left: auto;
+    min-width: auto;
+    width: min(280px, calc(50% - 20px));
+    padding: 10px;
+  }
+
+  .response-units-legend {
+    top: var(--map-overlay-top, 96px);
+    right: 10px;
+    left: auto;
+    width: min(224px, calc(50% - 20px));
+  }
+}
+
+@media (max-width: 640px) {
+  .wind-legend { width: calc(50% - 20px); max-height: var(--map-overlay-left-slot); }
+  .map-legend, .response-units-legend { width: calc(50% - 20px); }
+}

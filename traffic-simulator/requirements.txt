@@ -1,0 +1,10 @@
+# Traffic simulator library and worker runtime (Python 3.14).
+# SUMO binaries are not listed here: the container builds them from a
+# checksum-pinned source archive; local development uses requirements-sumo.txt.
+boto3==1.43.97
+httpx==0.28.1
+pydantic==2.13.5
+pyproj==3.8.0
+shapely==2.1.2
+sumolib==1.27.1
+traci==1.27.1

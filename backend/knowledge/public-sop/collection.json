@@ -1,0 +1,25 @@
+{
+  "collection": "wildfire-public-guidance-v1",
+  "artifacts": {
+    "documents/fema-before-evacuation.txt": "146f8f8bc6ca70aa380716260bba03f8630e2c0ce470222a1efa490eef9b9764",
+    "documents/fema-before-evacuation.txt.metadata.json": "4e4b3bf47e8a86df0a9f2c88b7f5e547117fa5b706cb5e7a74043913173fd5e0",
+    "documents/fema-during-evacuation.txt": "17dfb97cf3c9e4a72c833feec6683ef5c33d4596a2e2524c64419d0091cba93f",
+    "documents/fema-during-evacuation.txt.metadata.json": "0b84b339fea0cbb7312bb62d740c797f25459e3f4eeec46aa9cc7b1fdc7f3676",
+    "documents/fema-during-wildfire.txt": "9336dede0e1191c6d329b064c87f7ca9c141c6839c46d1f89aa3685776ae7f93",
+    "documents/fema-during-wildfire.txt.metadata.json": "b0b2a9a3f121f3e5b73fdc18981f052449e098c25db749c31691e1f7317b2539",
+    "documents/fema-evacuation-information.txt": "cc3ab3a0a95a9e9d10bad2a20e16684b842c4a5a95a8cfbee171ea6346244473",
+    "documents/fema-evacuation-information.txt.metadata.json": "7c1dd2c966085949afe9503c19a6a9164c0b0811d096c7331f698f065d302016",
+    "documents/fema-return-after-wildfire.txt": "ecc1847e60c1c22a770c18da99a696c4cd65e4093463eb1636acc72865b09e88",
+    "documents/fema-return-after-wildfire.txt.metadata.json": "856a7ad1a5d50b989b7361facb5c160b154b1e55aad0abe0ae7f21da0d002783",
+    "documents/fema-wildfire-preparation.txt": "c98e25abb39c2594ce066b303a7b224572cf790ff305511bd72864d09a3a700d",
+    "documents/fema-wildfire-preparation.txt.metadata.json": "307fc86c7234d4fd4f763f7250371eb1cbcd0023cf0f81d464faa153b9e83383",
+    "documents/nps-eighteen-watch-out-situations.txt": "b1e3dd6372e82fbfc1894fc0499b6db52e92d4d1751b4ddb3049e5e7be279920",
+    "documents/nps-eighteen-watch-out-situations.txt.metadata.json": "6fbc4963fdb04138b64b57f4e34e98aa2be6ffb0bf7987bf891527725b04ecc9",
+    "documents/nps-ten-standard-firefighting-orders.txt": "1866e11b725fc7dc07ece0794edb4af454aa034f7cc4cfee0bb2a75b8f1ad186",
+    "documents/nps-ten-standard-firefighting-orders.txt.metadata.json": "8946a2b274fdf7d7db18b2bcb27c93fd15be83a11547e92ca51a7978e45a33fe",
+    "documents/usfs-risk-management-process.txt": "3052ba4dfa4cf6e25cc8adaad827d16ed7ea5fafd18547f1beafab009780e565",
+    "documents/usfs-risk-management-process.txt.metadata.json": "147abe3b2e5471622a248c1c29281dc3d034d9c510d0bfc38650cd7905a256db",
+    "documents/usfs-risk-management-purpose.txt": "22ba31d66178cececb37df9eefc9e4801e8b3a800d8726816ed08a0da01d6932",
+    "documents/usfs-risk-management-purpose.txt.metadata.json": "b766db07d4735f5d7d701d559c1552bb45da1d2cf183a529fc1b5a853fa454fb"
+  }
+}

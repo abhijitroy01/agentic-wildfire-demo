@@ -1,0 +1,11 @@
+# Shared application API runtime (Python 3.14). The image also installs
+# traffic-simulator/requirements.txt because the API imports traffic_simulator.
+boto3==1.43.97
+fastapi==0.141.1
+httpx==0.28.1
+numpy==2.5.3
+pillow==12.3.0
+pydantic==2.13.5
+PyJWT==2.15.0
+uvicorn==0.53.0
+websockets==16.1.1

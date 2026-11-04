@@ -1,0 +1,121 @@
+{
+  "collection": "wildfire-public-guidance-v1",
+  "reviewed_at": "2026-09-28",
+  "scope": "Official publicly available guidance, not locally adopted SOPs or live incident orders. Text sections only; decorative figures omitted. No personal incident records.",
+  "sources": [
+    {
+      "id": "nps-firefighter-safety",
+      "snapshot": "nps-firefighter-safety.html",
+      "url": "https://www.nps.gov/articles/firefighting-orders-watchout-situations.htm",
+      "publisher": "National Park Service",
+      "source_date": "2025-08-20",
+      "retrieved_at": "2026-09-28",
+      "sha256": "f53124d4df2f74b31ddb211f9ff373548f62520b0c7f80129667428bee1ed97a",
+      "sections": [
+        {
+          "id": "nps-ten-standard-firefighting-orders",
+          "title": "10 Standard Firefighting Orders",
+          "start": "<h3>10 Standard Firefighting Orders</h3>",
+          "end": "<h3>18 Fire Watch-Out Situations</h3>"
+        },
+        {
+          "id": "nps-eighteen-watch-out-situations",
+          "title": "18 Fire Watch-Out Situations",
+          "start": "<h3>18 Fire Watch-Out Situations</h3>",
+          "end": "</ol>"
+        }
+      ]
+    },
+    {
+      "id": "fema-wildfires",
+      "snapshot": "fema-wildfires.html",
+      "url": "https://www.ready.gov/wildfires",
+      "publisher": "FEMA Ready.gov",
+      "source_date": "2026-08-11",
+      "retrieved_at": "2026-09-28",
+      "sha256": "b76be9007f96d6752b68cc274e36412b634ea67ec3139e8f89cd7af230ea9f6f",
+      "sections": [
+        {
+          "id": "fema-wildfire-preparation",
+          "title": "Prepare for Wildfires",
+          "start": "<h2 class=\"wp-block-heading\" id=\"prepare\">Prepare for Wildfires</h2>",
+          "end": "<h2 class=\"wp-block-heading\" id=\"during\">Stay Safe During</h2>"
+        },
+        {
+          "id": "fema-during-wildfire",
+          "title": "Stay Safe During a Wildfire",
+          "start": "<h2 class=\"wp-block-heading\" id=\"during\">Stay Safe During</h2>",
+          "end": "<h2 class=\"wp-block-heading\" id=\"after\">Returning Home After a Wildfire</h2>"
+        },
+        {
+          "id": "fema-return-after-wildfire",
+          "title": "Returning Home After a Wildfire",
+          "start": "<h2 class=\"wp-block-heading\" id=\"after\">Returning Home After a Wildfire</h2>",
+          "end": "<h2 class=\"wp-block-heading\" id=\"resources\">Additional Resources</h2>"
+        }
+      ]
+    },
+    {
+      "id": "fema-evacuation",
+      "snapshot": "fema-evacuation.html",
+      "url": "https://www.ready.gov/evacuation",
+      "publisher": "FEMA Ready.gov",
+      "source_date": "2026-03-20",
+      "retrieved_at": "2026-09-28",
+      "sha256": "b47b9110b204f8281f173cf7406c70a75299c74e4b2e295c045e325c92de6af7",
+      "sections": [
+        {
+          "id": "fema-evacuation-information",
+          "title": "Evacuation: Know Your Risks, Destination and Information Sources",
+          "start": "<h2 id=\"know\"><strong>Be in the Know</strong></h2>",
+          "end": "<h2 id=\"before\">Before an Evacuation</h2>"
+        },
+        {
+          "id": "fema-before-evacuation",
+          "title": "Before an Evacuation",
+          "start": "<h2 id=\"before\">Before an Evacuation</h2>",
+          "end": "<h2 id=\"during\">During an Evacuation</h2>"
+        },
+        {
+          "id": "fema-during-evacuation",
+          "title": "During an Evacuation",
+          "start": "<h2 id=\"during\">During an Evacuation</h2>",
+          "end": "<h2 id=\"after\"><strong>After an Evacuation </strong></h2>"
+        }
+      ]
+    },
+    {
+      "id": "usfs-risk-management",
+      "snapshot": "usfs-risk-management.html",
+      "url": "https://www.fs.usda.gov/managing-land/fire/safety",
+      "publisher": "USDA Forest Service",
+      "source_date": null,
+      "retrieved_at": "2026-09-28",
+      "sha256": "0f2c8ccf5080dbb6efe54494b34bcc310026d42f98c4a0b76ace159ce9c6fccc",
+      "sections": [
+        {
+          "id": "usfs-risk-management-purpose",
+          "title": "Forest Service Risk Management: Objectives and Residual Risk",
+          "start": "<h2>The US Forest Service Risk Management Program</h2>",
+          "end": "<h2>What is Risk Management in the Forest Service?</h2>"
+        },
+        {
+          "id": "usfs-risk-management-process",
+          "title": "What is Risk Management in the Forest Service?",
+          "start": "<h2>What is Risk Management in the Forest Service?</h2>",
+          "end": "<h2>U.S. Forest Service Risk Management Council</h2>"
+        }
+      ]
+    }
+  ],
+  "excluded": [
+    {
+      "url": "https://www.nwcg.gov/publications/pms461",
+      "reason": "Publication page verified January 2025 edition; linked PDF host failed DNS. No IRPG content ingested."
+    },
+    {
+      "url": "https://www.fs.usda.gov/sites/default/files/2020-04/master_revised_orm_guide_02262020.pdf",
+      "reason": "Reviewed for context only; graphical risk matrices and forms require separate visual extraction review; not ingested."
+    }
+  ]
+}

@@ -1,0 +1,78 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Python cache
+__pycache__/
+__pycache__*
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Local environment files — NEVER bake into the image. AgentCore Runtime
+# injects env vars from CloudFormation EnvironmentVariables at startup
+# (see backend/deployment/templates/nested/4-agentcore-resources.yaml).
+.env
+.env.*
+!.env.example
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage*
+htmlcov/
+.tox/
+*.cover
+.hypothesis/
+.mypy_cache/
+.ruff_cache/
+
+# Development
+*.log
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+
+# IDEs
+.vscode/
+.idea/
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Project specific
+tests/
+
+# Bedrock AgentCore specific - keep config but exclude runtime files
+.bedrock_agentcore.yaml
+.dockerignore
+
+# Release checks (deployment/deploy_backend.py runtime_source): the buildspec mounts them read-only into the
+# built image, so the image never contains them. check_startup.py and schema_models.py stay in the image.
+release-tests/
+
+# Keep wheelhouse for offline installations
+# wheelhouse/

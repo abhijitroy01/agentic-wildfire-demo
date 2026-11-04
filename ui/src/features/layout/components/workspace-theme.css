@@ -1,0 +1,177 @@
+/* Shared visual language across the agent assistant, incident workspace and response exercise. */
+.App { --workspace-bg:#f1f4f1; --surface:#fff; --ink:#21383d; --muted:#526b6b; --line:#d9e3e2;
+  --accent:#126667; --attention:#945516; background:var(--workspace-bg); color:var(--ink); }
+.App .app-header { box-sizing:border-box; background:#18383d; border-bottom:1px solid #335558;
+  box-shadow:none; padding:14px 0; overflow:visible; }
+.App .app-header::before { display:none; }.App .logo-container h1 { font-size:21px; letter-spacing:.06em;
+  animation:none; background:none; -webkit-text-fill-color:#fff; color:#fff; text-shadow:none; }
+.App .app-logo { height:40px; filter:none; }.App .tagline { color:#c6d8d5; font-style:normal; letter-spacing:0; }
+.App .header-buttons button { border-radius:7px; box-shadow:none; background:transparent; border:1px solid #527174;
+  color:#e8f3f1; padding:10px 14px; }
+.App .header-buttons button[aria-pressed="true"], .App .header-buttons button[aria-current="step"] {
+  background:#eef6f2; color:#163f42; border-color:#eef6f2; }
+.App .workflow-nav ol { display:flex; gap:10px; margin:0; padding:0; list-style:none; }
+.App .workflow-nav li { margin:0; }
+.App .workflow-nav button { font-size:14px; font-weight:600; cursor:pointer; white-space:nowrap; }
+.App .workflow-nav button[aria-current="step"] { cursor:default; }
+/* Display-only line for the scenario selected in stage 2. */
+.scenario-strip { box-sizing:border-box; width:100%; background:#e5eeea; color:var(--ink); border-bottom:1px solid var(--line);
+  padding:8px 32px; }
+.scenario-strip p { max-width:1600px; margin:0 auto; font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
+.workspace-surface { box-sizing:border-box; width:100%; padding:28px 32px; flex:1; background:var(--workspace-bg);
+  color:var(--ink); text-align:left; }
+.workspace-heading { display:flex; align-items:start; justify-content:space-between; gap:24px; margin-bottom:20px; }
+.workspace-heading h1 { margin:6px 0 8px; font-size:28px; letter-spacing:-.025em; color:var(--ink); }
+.workspace-heading p { font-size:14px; line-height:1.6; color:var(--muted); margin:0; max-width:780px; }
+.workspace-heading .eyebrow, .workspace-card .eyebrow { font-size:11px; letter-spacing:.12em; color:#41696a; font-weight:700; }
+.workspace-badge { background:#e5eeea; color:#285653; border-radius:16px; padding:8px 12px; font-size:12px; white-space:nowrap; }
+.workspace-card, .agent-activity { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:20px; }
+.agent-activity h3 { margin:0 0 12px; font-size:16px; }
+.agent-activity p { font-size:13px; color:var(--muted); line-height:1.6; }
+.agent-activity ol { list-style:none; margin:0; padding:0; max-height:320px; overflow:auto; }
+.agent-activity li { margin:0; padding:12px 0; border-bottom:1px solid var(--line); font-size:13px; }
+.agent-activity li > div { display:flex; justify-content:space-between; gap:12px; }
+/* The row title wraps; its status label stays on one line. */
+.agent-activity li > div > strong { min-width:0; overflow-wrap:anywhere; }
+.agent-activity li > div > span { flex:none; white-space:nowrap; }
+.agent-activity li span, .agent-activity li small { color:var(--muted); font-size:11px; }
+.agent-activity li[data-status="error"] span { color:#a44820; }
+.agent-activity li[data-status="running"] span { color:var(--accent); font-weight:700; }
+.agent-activity ol ol { max-height:none; overflow:visible; margin:8px 0 0; padding-left:14px; border-left:2px solid var(--line); }
+.agent-activity ol ol li:last-child { border-bottom:0; }
+.App .investigation-columns { display:grid; grid-template-columns:minmax(300px,440px) minmax(0,1fr); gap:24px;
+  width:100%; max-width:1600px; margin:0 auto; padding:0; min-height:640px; background:transparent; }
+.investigation-assistant { min-width:0; display:grid; gap:16px; align-content:start; }
+/* Stage 1's hand-off to stage 2: the selected answer's place as a search area. */
+.search-area h3 { margin:0 0 8px; font-size:16px; overflow-wrap:anywhere; }
+.search-area p { margin:0 0 12px; font-size:13px; line-height:1.6; color:var(--muted); }
+.search-area p:last-child { margin:12px 0 0; }
+.App .investigation-workspace .chat-container { width:100%; min-width:0; min-height:460px; max-height:68vh; margin:0;
+  background:white; color:var(--ink); border:1px solid var(--line); border-radius:12px; box-shadow:none; }
+.App .investigation-workspace .messages-container { padding:16px; background:white; }
+.App .investigation-workspace .message-bubble { background:#eef5f2; color:var(--ink); border:0; box-shadow:none; }
+.App .current-weather-section article { padding:12px 0; border-bottom:1px solid var(--line); }
+.App .current-weather-section dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.App .current-weather-section dt { color:var(--muted); font-size:12px; }
+.App .current-weather-section dd { margin:4px 0; font-weight:600; }
+.App .current-weather-section pre { overflow:auto; max-height:300px; font-size:12px; }
+.App .audio-item { background:#eef5f2; color:var(--ink); border-color:var(--line); }
+.App .audio-header { width:100%; background:transparent; border:0; text-align:left; color:var(--ink); }
+.App .audio-language { color:var(--ink); }
+.App .audio-voice, .App .audio-expiry { color:var(--muted); }
+.App .detail-panel-wrapper { background:var(--surface); color:var(--ink); border-color:var(--line); }
+.App .detail-panel-wrapper .docked-panel__header { background:#eef5f2; border-color:var(--line); }
+.App .detail-panel-wrapper .docked-panel__title,
+.App .detail-panel-wrapper .docked-panel__close { color:var(--ink); }
+.App .detail-panel-wrapper .citation-item { background:#f5f8f7; border-color:var(--line); }
+.App .detail-panel-wrapper .citation-excerpt { color:var(--ink); }
+.App .detail-panel-wrapper .citation-document a { color:#126667; }
+.App .detail-panel-wrapper .accordion { background:#f5f8f7; border-color:var(--line); }
+.App .detail-panel-wrapper .accordion-header { background:#eef5f2; color:var(--ink); }
+.App .detail-panel-wrapper .accordion .accordion-title-text,
+.App .detail-panel-wrapper .accordion .accordion-toggle { color:var(--ink); }
+.App .detail-panel-wrapper .accordion-content { background:var(--surface); border-color:var(--line); }
+.App .detail-panel-wrapper .metadata-display { color:var(--ink); background:#eef5f2; }
+.App .detail-panel-wrapper .metadata-value { color:var(--ink); }
+.App .detail-panel-wrapper .metadata-item { color:var(--muted); }
+.App .detail-panel-wrapper button.audio-header { background:transparent; color:var(--ink); border:0; }
+.App .investigation-workspace .user .message-bubble { background:#126667; color:white; }
+.App .investigation-workspace .message-input { background:white; border:1px solid #bacaca; color:var(--ink); box-shadow:none; }
+.App .investigation-workspace .input-form { background:white; border-top:1px solid var(--line); padding:14px; gap:8px; }
+.App .investigation-workspace .send-button { background:var(--accent); box-shadow:none; border-radius:7px; padding:10px 14px; }
+.App .investigation-workspace .loading-message { color:var(--ink); }
+.App .investigation-workspace .map-container { width:100%; min-width:0; min-height:640px; max-height:none; height:72vh;
+  background:white; margin:0; border:1px solid var(--line); border-radius:12px; box-shadow:none; }
+.App .workspace-surface button, .App .workspace-surface input, .App .workspace-surface textarea,
+.App .workspace-surface select { font:inherit; }
+.App .workspace-surface button { background:var(--accent); color:white; border:1px solid transparent;
+  border-radius:7px; padding:10px 14px; cursor:pointer; font-size:13px; }
+.App .workspace-surface button:disabled { opacity:.5; cursor:not-allowed; }
+.App button:focus-visible, .App input:focus-visible, .App textarea:focus-visible, .App select:focus-visible {
+  outline:3px solid #dfaa4d; outline-offset:3px; }
+.App .workspace-surface .secondary { background:white; color:var(--ink); border-color:#bacaca; }
+.response-workspace .workspace-close { margin-bottom:20px; }
+.response-workspace-content { max-width:1600px; margin:auto; display:grid; grid-template-columns:320px minmax(0,1fr); gap:20px; }
+.response-workspace-content > * { min-width:0; margin:0; }
+.response-workspace-content .rdp-api-status { background:#e5eeea; padding:12px; border-radius:8px; }
+.response-workspace-content .rdp-status-text { color:var(--muted); }
+.response-workspace-content .rdp-demo-note { grid-column:1/-1; font-size:13px; color:var(--muted); }
+.response-workspace-content .rdp-report, .response-workspace-content .rdp-dispatch-section,
+.response-workspace-content .rdp-responses-section, .response-workspace-content .rdp-active-simulation {
+  background:white; border:1px solid var(--line); border-radius:12px; padding:20px; }
+.response-workspace-controls, .response-workspace-evidence { display:grid; gap:20px; align-content:start; }
+.App .response-workspace .map-container { width:100%; height:560px; min-height:480px; margin:0;
+  background:white; border:1px solid var(--line); border-radius:12px; }
+.response-workspace-content .rdp-report, .response-workspace-content .rdp-dispatch-section,
+.response-workspace-content .rdp-active-simulation, .response-workspace-content .rdp-api-status { grid-column:1; }
+.response-workspace-content .rdp-truck-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px; }
+.response-workspace-content input, .response-workspace-content select, .response-workspace-content textarea {
+  box-sizing:border-box; width:100%; background:white; color:var(--ink); border:1px solid #bacaca; border-radius:6px; padding:10px; }
+.response-workspace-content .rdp-dispatch-section h4, .response-workspace-content .rdp-empty-state,
+.response-workspace-content .rdp-sim-fire, .response-workspace-content .rdp-sim-time { color:var(--ink); }
+.incident-investigation { margin:0; max-width:1600px; box-sizing:border-box; }
+.incident-investigation .planning-assessments { display:grid; gap:16px; margin-top:18px; }
+.incident-investigation .planning-assessments > section, .incident-investigation .initial-assessment {
+  border:1px solid var(--line); border-radius:8px; padding:16px; min-width:0; overflow-wrap:anywhere; }
+.incident-investigation .planning-assessment-text { white-space:pre-wrap; font-size:14px; line-height:1.7;
+  color:var(--ink); background:var(--surface); padding:0; }
+.incident-investigation .pending-assessment { background:#f4f8f7; }
+.incident-investigation .planning-sources { border-top:1px solid var(--line); padding-top:14px; }
+.mission-findings { color:var(--ink,#21383d); }
+.mission-findings dl { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.mission-findings h4 { margin:0 0 12px; }
+.mission-findings dt { font-size:12px; color:var(--muted,#526b6b); }
+.mission-findings dd { margin:4px 0 0; font-weight:600; }
+.finding-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.incident-investigation .investigation-status { padding:10px 0; font-size:13px; }
+.incident-investigation .investigation-status button { margin-left:12px; }
+.incident-investigation dl > div { margin:8px 0; }.incident-investigation dt { color:var(--muted); }
+.incident-investigation dd { margin:0; }.incident-investigation .agent-activity { margin-top:16px; }
+.workflow-progress { max-width:1600px; margin:20px auto; padding:0; list-style:none; display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+.workflow-progress li { background:white; border:1px solid var(--line); border-radius:8px; padding:14px; font-size:13px; }
+.workflow-progress span { display:block; margin-top:6px; color:var(--muted); font-size:12px; }
+.App .map-undocked { position:fixed !important; inset:0 !important; z-index:1500; width:100vw !important;
+  height:100dvh !important; max-height:none !important; margin:0 !important; border-radius:0 !important;
+  box-sizing:border-box; background:white; overflow:auto; }
+.App .map-undocked { display:flex; flex-direction:column; overflow:hidden; }
+.App .map-undocked .map-wrap { flex:1; min-height:0; }
+.App .map-undocked .simulation-map { height:100% !important; min-height:0 !important; }
+.App .map-undocked .evac-details, .App .map-undocked .evac-empty,
+.App .map-undocked .scenario-nav, .App .map-undocked .policy-insights,
+.App .map-undocked .metrics, .App .map-undocked .source-preview,
+.App .map-undocked .replay-status, .App .map-undocked .evac-replay-totals { display:none; }
+.map-undock-control { position:absolute; right:14px; top:14px; z-index:110; }
+.App .map-container .response-units-legend { top:var(--map-overlay-top,96px); }
+/* Response units use the right lane; saved fire evidence uses the left lane above the wind legend. */
+.App .map-container:has(.response-units-legend) .fire-exposure-summary { top:var(--map-overlay-top,96px);
+  bottom:auto; left:20px; right:auto; }
+@media(max-width:640px) {
+  .App .map-container:has(.response-units-legend) .fire-exposure-summary {
+    top:calc(var(--map-overlay-top) + var(--map-overlay-left-slot) + var(--map-overlay-gap));
+    bottom:auto; left:10px; right:auto;
+  }
+}
+.response-workspace-content .rdp-truck-list { list-style:none; padding:0; }
+.App .investigation-workspace .map-undocked .main-map { height:100%; }
+.App .incident-observation-marker { border-radius:50%; border:2px solid white; padding:0; width:32px; height:32px;
+  background:#a54123; color:white; font-weight:800; font-size:14px; box-shadow:0 2px 6px #21383d55; }
+.App .incident-observation-marker[aria-pressed] { background:#a54123; color:white; }
+.App .incident-observation-marker[aria-pressed="true"] { outline:3px solid #126667; outline-offset:3px; }
+.map-observation-details { color:#21383d; font:13px/1.5 system-ui; padding:8px; max-height:60vh; overflow:auto; }
+.map-observation-details h3 { margin:0 0 8px; }.map-observation-details p { margin:5px 0; }
+.response-workspace-content .rdp-truck-card { background:#f4f8f7; border:1px solid var(--line); box-shadow:none; }
+.response-workspace-content .rdp-truck-name, .response-workspace-content .rdp-water-label,
+.response-workspace-content .rdp-truck-telemetry { color:var(--ink); }
+.response-workspace-content .rdp-footer { background:#e5eeea; color:var(--ink); border-color:var(--line); }
+@media(max-width:1100px) { .App .tagline { display:none; } }
+@media(max-width:900px) { .workspace-surface { padding:16px; }.workspace-badge { display:none; }
+  .App .app-header { flex-wrap:wrap; gap:12px; }.App .header-right { width:100%; padding:0 16px; justify-content:start; }
+  .App .header-buttons { flex-wrap:wrap; }.App .workflow-nav ol { flex-wrap:wrap; gap:8px; }
+  .App .workflow-nav button { padding:8px 10px; }.scenario-strip { padding:8px 16px; }.App .investigation-columns, .response-workspace-content { grid-template-columns:1fr; }
+  .response-workspace-content .rdp-responses-section { grid-column:auto; grid-row:auto; }
+  .response-workspace-content .response-workspace-map { grid-column:auto; grid-row:auto; }
+  .workflow-progress { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .App .investigation-workspace .map-container { height:65vh; min-height:440px; } }
+@media(prefers-reduced-motion:reduce) { .App *, .App *::before, .App *::after {
+  animation-duration:.001ms !important; transition-duration:.001ms !important; scroll-behavior:auto !important; } }

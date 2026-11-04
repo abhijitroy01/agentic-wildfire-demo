@@ -1,0 +1,18 @@
+# Gitleaks false-positive suppressions. Each entry has been reviewed.
+
+# backend/knowledge/public-sop/snapshots/fema-evacuation.html:1416 and fema-wildfires.html:1679 - generic-api-key
+# False positive. Each line is a data-contextual-token attribute captured verbatim from a public FEMA Ready.gov
+# page: the publisher's page-rendering token, not a credential of this project. The snapshots are digest-pinned
+# provenance for the public guidance collection (sources.json pins each SHA-256) and are never served to a
+# browser; only the extracted documents/*.txt files are ingested (backend/knowledge/public-sop/README.md).
+# Editing them would break the pinned checksum.
+backend/knowledge/public-sop/snapshots/fema-evacuation.html:generic-api-key:1416
+backend/knowledge/public-sop/snapshots/fema-wildfires.html:generic-api-key:1679
+
+# backend/deployment/tests/test_backend_templates.py:392 - generic-api-key
+# False positive: a SHA-256 digest of a CloudFormation template block, labeled "CognitoAuthStack"; not a credential.
+backend/deployment/tests/test_backend_templates.py:generic-api-key:392
+
+# traffic-simulator/tests/test_store.py:291 - generic-api-key
+# False positive: a DynamoDB lease-token fixture ("token") in a unit test; not a credential.
+traffic-simulator/tests/test_store.py:generic-api-key:291

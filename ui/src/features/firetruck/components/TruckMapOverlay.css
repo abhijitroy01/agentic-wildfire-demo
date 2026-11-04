@@ -1,0 +1,195 @@
+/**
+ * TruckMapOverlay styles - Uber-style truck markers
+ */
+
+.truck-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none; /* Allow map interactions through the overlay */
+  /* Leave marker and selected-popup stacking independent: a parent z-index traps the popup below map controls. */
+  overflow: hidden;
+}
+
+/* Truck marker container */
+.truck-marker {
+  position: absolute;
+  transform: translate(-50%, -50%); /* Center on the coordinate */
+  pointer-events: auto; /* Enable clicks on markers */
+  cursor: pointer;
+  z-index: 11;
+  transition: transform 0.3s ease-out; /* Smooth movement */
+}
+
+.truck-marker:hover {
+  transform: translate(-50%, -50%) scale(1.2);
+  z-index: 20;
+}
+
+/* Truck icon */
+.truck-icon {
+  font-size: 24px;
+  display: block;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  animation: truck-bounce 2s ease-in-out infinite;
+}
+
+.truck-marker.arrived .truck-icon {
+  animation: none;
+  font-size: 22px;
+}
+
+/* Pulsing effect for responding trucks */
+.truck-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--truck-color, #3B82F6);
+  opacity: 0;
+  pointer-events: none;
+  animation: pulse 1.5s ease-out infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.5);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes truck-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* Popup styles */
+.truck-popup {
+  position: absolute;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  min-width: 220px;
+  pointer-events: auto;
+  z-index: 120; /* Selected details, including Close, sit above the undock control; markers remain below it. */
+  transform: translateY(-50%);
+  animation: popup-in 0.2s ease-out;
+}
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+.popup-header {
+  background: linear-gradient(135deg, #3B82F6, #2563EB);
+  color: white;
+  padding: 10px 12px;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.popup-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: background 0.2s;
+}
+
+.popup-close:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.popup-content {
+  padding: 12px;
+}
+
+.popup-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.popup-label {
+  color: #6B7280;
+}
+
+.popup-value {
+  font-weight: 600;
+  color: #1F2937;
+}
+
+.popup-value.status {
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.popup-progress-bar {
+  background: #E5E7EB;
+  height: 6px;
+  border-radius: 3px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.popup-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3B82F6, #60A5FA);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Danger warning in popup */
+.popup-danger-warning {
+  background: linear-gradient(135deg, #DC2626, #EF4444);
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  text-align: center;
+  margin-top: 8px;
+  animation: danger-pulse 1s ease-in-out infinite;
+}
+
+@keyframes danger-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

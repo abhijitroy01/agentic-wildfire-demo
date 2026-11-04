@@ -1,0 +1,13 @@
+# Explicit closure for the repository-root build context.
+*
+!requirements-lock.txt
+!requirements-dev.txt
+!pyproject.toml
+!deployment/settings.toml
+!fire-risk-modeler/requirements.txt
+!fire-risk-modeler/requirements-dev.txt
+!fire-risk-modeler/fire_risk_modeler/
+!fire-risk-modeler/tests/
+!fire-risk-modeler/scripts/
+**/__pycache__
+**/.runtime

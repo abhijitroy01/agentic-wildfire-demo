@@ -1,0 +1,681 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Wildfire Backend - Infrastructure Stack (S3, Secrets, ECR, IAM Roles)
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - development
+      - staging
+      - production
+
+  ParentStackName:
+    Type: String
+    Description: Name of the parent CloudFormation stack (used for resource naming)
+
+  ProjectName:
+    Type: String
+    Description: Project name for tagging
+    Default: WildfireDataFabric
+
+  NasaFirmsApiKey:
+    Type: String
+    Description: NASA FIRMS API Key
+    NoEcho: true
+
+  DTNClientId:
+    Type: String
+    Description: DTN Weather Client ID
+    NoEcho: true
+
+  DTNClientSecret:
+    Type: String
+    Description: DTN Weather Client Secret
+    NoEcho: true
+
+  DeploymentTimestamp:
+    Type: String
+    Description: Deployment timestamp to force updates
+    Default: "20250101000000"
+
+  # [aws] operator_role_arns from the root template (D52), with the same pattern.
+  OperatorRoleArns:
+    Type: CommaDelimitedList
+    AllowedPattern: "arn:aws:iam::[0-9]{12}:role/(?:[A-Za-z0-9+=.@_-]+/)*[A-Za-z0-9+=.@_-]{1,64}"
+    Description: "[aws] operator_role_arns in the installation file: IAM roles (deployer, break-glass) that may read and write this installation's bucket objects."
+
+Resources:
+  # ============================================================================
+  # KMS Key (shared for stack resources)
+  # ============================================================================
+
+  StackEncryptionKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Encryption key for backend infrastructure stack resources
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowKeyManagement
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+          - Sid: AllowCloudWatchLogs
+            Effect: Allow
+            Principal:
+              Service: !Sub "logs.${AWS::Region}.amazonaws.com"
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: "*"
+
+  # ============================================================================
+  # Access Log Bucket (for S3 server access logging)
+  # ============================================================================
+
+  AccessLogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: "This bucket is the server access log destination for the stack's buckets; logging it to itself would log its own log deliveries."
+      checkov:
+        skip:
+          - id: CKV_AWS_18
+            comment: "This bucket is the server access log destination for the stack's buckets; logging it to itself would log its own log deliveries."
+      guard:
+        # S3_BUCKET_LOGGING_ENABLED: this bucket is the log destination (see cfn_nag W35 above).
+        # S3_BUCKET_NO_PUBLIC_RW_ACL fails only because AccessControl is unset. ACLs stay unused on purpose:
+        # PublicAccessBlockConfiguration blocks and ignores public ACLs, and AWS recommends leaving the
+        # legacy AccessControl property unset, so no update ever calls PutBucketAcl on this retained bucket.
+        SuppressedRules:
+          - S3_BUCKET_LOGGING_ENABLED
+          - S3_BUCKET_NO_PUBLIC_RW_ACL
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      # Versioning keeps an overwritten or deleted log for NoncurrentDays before it expires.
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireLogs
+            Status: Enabled
+            # Fixed retention, not a setting (D37): 90 days of access logs cover a review of recent demo traffic.
+            ExpirationInDays: 90
+            NoncurrentVersionExpiration:
+              # Fixed (D37): an overwritten or deleted log stays recoverable for 30 days, like BuildSource versions.
+              NoncurrentDays: 30
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Purpose
+          Value: AccessLogs
+
+  AccessLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AccessLogBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: S3ServerAccessLogsPolicy
+            Effect: Allow
+            Principal:
+              Service: logging.s3.amazonaws.com
+            Action: s3:PutObject
+            Resource: !Sub "${AccessLogBucket.Arn}/*"
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+          # The Boolean false (not the string "false") is the form cfn-guard S3_BUCKET_SSL_REQUESTS_ONLY recognizes.
+          - Sid: EnforceTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt AccessLogBucket.Arn
+              - !Sub "${AccessLogBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+          # D52: only the operators and AWS services (S3 log delivery, through the Allow above) touch these objects.
+          # BoolIfExists: an anonymous request has no aws:PrincipalIsAWSService, and the Deny applies to it too.
+          - Sid: DenyObjectAccessOutsideInstallation
+            Effect: Deny
+            Principal: "*"
+            Action:
+              - "s3:GetObject*"
+              - "s3:PutObject*"
+              - "s3:DeleteObject*"
+              - "s3:RestoreObject"
+              - "s3:AbortMultipartUpload"
+              - "s3:ListMultipartUploadParts"
+              - "s3:Replicate*"
+            Resource: !Sub "${AccessLogBucket.Arn}/*"
+            Condition:
+              ArnNotLike:
+                aws:PrincipalArn: !Ref OperatorRoleArns
+              BoolIfExists:
+                aws:PrincipalIsAWSService: "false"
+
+  # ============================================================================
+  # ECR Repository for Runtime Container
+  # ============================================================================
+
+  # AES-256 at rest on purpose (D3 accepted risk): EncryptionConfiguration is create-only, so switching this
+  # existing repository to KMS would replace it and delete its images.
+  RuntimeECRRepository:
+    Type: AWS::ECR::Repository
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      checkov:
+        skip:
+          - id: CKV_AWS_136
+            comment: "D3: encrypted at rest with AES-256; EncryptionConfiguration is create-only, so changing it to KMS replaces the repository and deletes its images."
+    Properties:
+      RepositoryName: !Sub ${ParentStackName}-runtime-${AWS::Region}
+      ImageTagMutability: IMMUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      # Fixed (D37, D53): the newest 10 images, as deployment/retention.py IMAGES_KEPT and the CDK repositories keep;
+      # the deployer refuses a release whose push would expire an image in use.
+      LifecyclePolicy:
+        LifecyclePolicyText: '{"rules": [{"rulePriority": 1, "description": "Keep the newest 10 release images (D53)", "selection": {"tagStatus": "any", "countType": "imageCountMoreThan", "countNumber": 10}, "action": {"type": "expire"}}]}'
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Purpose
+          Value: RuntimeContainer
+
+  # ============================================================================
+  # S3 Buckets
+  # ============================================================================
+
+  VoiceMessageBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      guard:
+        # S3_BUCKET_NO_PUBLIC_RW_ACL fails only because AccessControl is unset; see AccessLogBucket.
+        SuppressedRules:
+          - S3_BUCKET_NO_PUBLIC_RW_ACL
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref AccessLogBucket
+        LogFilePrefix: voice-messages/
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteOldVoiceMessages
+            Status: Enabled
+            ExpirationInDays: 30
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Purpose
+          Value: VoiceMessages
+
+  VoiceMessageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref VoiceMessageBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnforceTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt VoiceMessageBucket.Arn
+              - !Sub "${VoiceMessageBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+          # D52: the Runtime writes and reads voice messages (and signs their playback URLs); otherwise operators only.
+          # RuntimeExecutionRole's policies do not name this bucket, so the reference makes no cycle.
+          - Sid: DenyObjectAccessOutsideInstallation
+            Effect: Deny
+            Principal: "*"
+            Action:
+              - "s3:GetObject*"
+              - "s3:PutObject*"
+              - "s3:DeleteObject*"
+              - "s3:RestoreObject"
+              - "s3:AbortMultipartUpload"
+              - "s3:ListMultipartUploadParts"
+              - "s3:Replicate*"
+            Resource: !Sub "${VoiceMessageBucket.Arn}/*"
+            Condition:
+              ArnNotLike:
+                aws:PrincipalArn: !Split [",", !Join [",", [!GetAtt RuntimeExecutionRole.Arn, !Join [",", !Ref OperatorRoleArns]]]]
+              BoolIfExists:
+                aws:PrincipalIsAWSService: "false"
+
+  ReportImagesBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Metadata:
+      guard:
+        # S3_BUCKET_NO_PUBLIC_RW_ACL fails only because AccessControl is unset; see AccessLogBucket.
+        SuppressedRules:
+          - S3_BUCKET_NO_PUBLIC_RW_ACL
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref AccessLogBucket
+        LogFilePrefix: report-images/
+      # No CORS rule (G11): the UI opens a report's presigned URL in a new tab, and no browser code fetches,
+      # requests or draws from this bucket, so no other origin may read it from a script.
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireReportImages
+            Status: Enabled
+            ExpirationInDays: 7
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: Purpose
+          Value: ReportImages
+
+  ReportImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ReportImagesBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: EnforceTLS
+            Effect: Deny
+            Principal: "*"
+            Action: "s3:*"
+            Resource:
+              - !GetAtt ReportImagesBucket.Arn
+              - !Sub "${ReportImagesBucket.Arn}/*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+          # D52: no installation role uses this retained, empty bucket, so only the operators may touch its objects.
+          - Sid: DenyObjectAccessOutsideInstallation
+            Effect: Deny
+            Principal: "*"
+            Action:
+              - "s3:GetObject*"
+              - "s3:PutObject*"
+              - "s3:DeleteObject*"
+              - "s3:RestoreObject"
+              - "s3:AbortMultipartUpload"
+              - "s3:ListMultipartUploadParts"
+              - "s3:Replicate*"
+            Resource: !Sub "${ReportImagesBucket.Arn}/*"
+            Condition:
+              ArnNotLike:
+                aws:PrincipalArn: !Ref OperatorRoleArns
+              BoolIfExists:
+                aws:PrincipalIsAWSService: "false"
+
+  # ============================================================================
+  # Secrets Manager
+  # ============================================================================
+
+  APIKeysSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub ${AWS::StackName}/api-keys
+      Description: API keys for external services
+      KmsKeyId: !GetAtt StackEncryptionKey.Arn
+      SecretString: !Sub |
+        {
+          "NASA_FIRMS_API_KEY": "${NasaFirmsApiKey}",
+          "DTN_CLIENT_ID": "${DTNClientId}",
+          "DTN_CLIENT_SECRET": "${DTNClientSecret}"
+        }
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ============================================================================
+  # IAM Roles
+  # ============================================================================
+
+  # Lambda Execution Role
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Execution role for Wildfire Lambda functions
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      # Only WeatherDTNServiceFunction runs as this role; it reads the DTN credentials from APIKeysSecret by ARN
+      # (D53). The role, the secret and the key are all in this template.
+      Policies:
+        - PolicyName: ReadDtnCredentials
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource: !Ref APIKeysSecret
+              # APIKeysSecret is encrypted with the stack key; the role may decrypt it only through Secrets Manager.
+              - Effect: Allow
+                Action: kms:Decrypt
+                Resource: !GetAtt StackEncryptionKey.Arn
+                Condition:
+                  StringEquals:
+                    kms:ViaService: !Sub secretsmanager.${AWS::Region}.amazonaws.com
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ManagedBy
+          Value: CloudFormation
+
+  # Custom Resource Lambda Role. Only GetCognitoClientSecretFunction (2-lambda-functions.yaml) runs as this
+  # role, so it carries no inline policy here: its grants (cognito-idp:DescribeUserPoolClient on the gateway
+  # user pool, secretsmanager:PutSecretValue on GatewayClientSecret and the stack key through Secrets Manager)
+  # are GatewayClientSecretReadPolicy in 3-cognito-auth.yaml, where the pool and the secret exist.
+  # The AgentCore credential-provider, guardrail, KMS, CloudFormation and observability grants served the
+  # removed credential-provider functions or no function at all (CloudFormation manages the guardrail).
+  CustomResourceLambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+
+  # AgentCore Runtime Execution Role
+  RuntimeExecutionRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "ecr:GetAuthorizationToken, the X-Ray telemetry actions do not support resource-level permissions; every Bedrock action is scoped by ARN"
+    Properties:
+      Description: Execution role for AgentCore Runtime
+      # Only AgentCore resources in this account and Region may assume the role (confused-deputy guard).
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:*
+      Policies:
+        - PolicyName: !Sub CloudWatchLogsScoped-${DeploymentTimestamp}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/*"
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/*:*"
+        - PolicyName: !Sub BedrockModelAccess-${DeploymentTimestamp}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Agents call Converse/ConverseStream with ModelId and ReportModelId, which are inference
+              # profiles in this Region (global profiles included) or foundation models. A profile routes
+              # to foundation models in other Regions, or in no Region for global profiles. Custom,
+              # imported and provisioned models are not allowed. The runtime calls no Bedrock control-plane
+              # API, so GetInferenceProfile, ListInferenceProfiles, GetGuardrail and ListGuardrails are gone.
+              - Sid: InvokeInferenceProfilesAndFoundationModels
+                Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource:
+                  - !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:inference-profile/*
+                  - !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:application-inference-profile/*
+                  - !Sub arn:${AWS::Partition}:bedrock:*::foundation-model/*
+                  - !Sub arn:${AWS::Partition}:bedrock:::foundation-model/*
+              # Every agent model applies the stack's published guardrail. The guardrail is created by a
+              # later nested stack, so this stack can name only guardrails in this account and Region.
+              - Sid: ApplyAccountGuardrails
+                Effect: Allow
+                Action: bedrock:ApplyGuardrail
+                Resource: !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}:${AWS::AccountId}:guardrail/*
+        - PolicyName: !Sub ECRAccess-${DeploymentTimestamp}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: ecr:GetAuthorizationToken
+                Resource: "*"
+              - Effect: Allow
+                Action: [ecr:BatchCheckLayerAvailability, ecr:GetDownloadUrlForLayer, ecr:BatchGetImage]
+                Resource: !GetAtt RuntimeECRRepository.Arn
+        - PolicyName: !Sub RuntimeTracing-${DeploymentTimestamp}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # X-Ray scoped to specific actions per AWS AgentCore Runtime execution role docs
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                Resource: "*"
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+  # AgentCore Gateway Execution Role
+  GatewayExecutionRole:
+    Type: AWS::IAM::Role
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "X-Ray APIs do not support resource-level permissions"
+    Properties:
+      Description: Execution role for AgentCore Gateway
+      # Only AgentCore resources in this account and Region may assume the role (confused-deputy guard).
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+              ArnLike:
+                aws:SourceArn: !Sub arn:${AWS::Partition}:bedrock-agentcore:${AWS::Region}:${AWS::AccountId}:*
+      Policies:
+        - PolicyName: !Sub CloudWatchLogsScoped-${DeploymentTimestamp}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - logs:DescribeLogGroups
+                  - logs:DescribeLogStreams
+                Resource:
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/*"
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/bedrock-agentcore/*:*"
+        - PolicyName: !Sub LambdaInvokeAccess-${DeploymentTimestamp}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Exactly the gateway target functions named in 2-lambda-functions.yaml (unqualified or with a
+              # version or alias), so the custom-resource functions under the same prefix are excluded. The
+              # unnamed simulation adapter is granted by SimulationGatewayInvokePolicy in 4-agentcore-resources.yaml.
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ParentStackName}-weather-dtn-service"
+                  - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ParentStackName}-weather-dtn-service:*"
+                  - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ParentStackName}-geocode-service"
+                  - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ParentStackName}-geocode-service:*"
+                  - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ParentStackName}-wildfire-service"
+                  - !Sub "arn:${AWS::Partition}:lambda:${AWS::Region}:${AWS::AccountId}:function:${ParentStackName}-wildfire-service:*"
+        # No credential-provider access: every target uses this role (GATEWAY_IAM_ROLE) to invoke its Lambda,
+        # and no target authorizes outbound with OAuth or an API key.
+        - PolicyName: !Sub GatewayTracing-${DeploymentTimestamp}
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # X-Ray scoped to specific actions per AWS AgentCore Gateway execution role docs
+              - Effect: Allow
+                Action:
+                  - xray:PutTraceSegments
+                  - xray:PutTelemetryRecords
+                  - xray:GetSamplingRules
+                  - xray:GetSamplingTargets
+                Resource: "*"
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  # ECR
+  RuntimeECRRepositoryUri:
+    Description: ECR Repository URI for Runtime Container
+    Value: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${RuntimeECRRepository}
+
+  RuntimeECRRepositoryName:
+    Description: ECR Repository Name
+    Value: !Ref RuntimeECRRepository
+
+  # S3
+  VoiceMessageBucketName:
+    Description: S3 Bucket for voice messages
+    Value: !Ref VoiceMessageBucket
+
+  VoiceMessageBucketArn:
+    Description: S3 Bucket ARN for voice messages
+    Value: !GetAtt VoiceMessageBucket.Arn
+
+  ReportImagesBucketName:
+    Description: S3 Bucket for report images
+    Value: !Ref ReportImagesBucket
+
+  ReportImagesBucketArn:
+    Description: S3 Bucket ARN for report images
+    Value: !GetAtt ReportImagesBucket.Arn
+
+  # Secrets
+  APIKeysSecretArn:
+    Description: Secrets Manager ARN for API keys
+    Value: !Ref APIKeysSecret
+
+  # KMS
+  StackEncryptionKeyArn:
+    Description: ARN of the stack's customer-managed KMS key (key rotation on), reused by the other nested stacks
+    Value: !GetAtt StackEncryptionKey.Arn
+
+  # IAM Roles
+  LambdaExecutionRoleArn:
+    Description: Lambda Execution Role ARN
+    Value: !GetAtt LambdaExecutionRole.Arn
+
+  CustomResourceLambdaRoleArn:
+    Description: Custom Resource Lambda Role ARN
+    Value: !GetAtt CustomResourceLambdaRole.Arn
+
+  RuntimeExecutionRoleArn:
+    Description: Runtime Execution Role ARN
+    Value: !GetAtt RuntimeExecutionRole.Arn
+
+  GatewayExecutionRoleArn:
+    Description: Gateway Execution Role ARN
+    Value: !GetAtt GatewayExecutionRole.Arn
+
+  # Stack Info
+  Environment:
+    Description: Environment name
+    Value: !Ref Environment
+
+  ProjectName:
+    Description: Project name
+    Value: !Ref ProjectName

@@ -1,0 +1,427 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Wildfire Data Fabric - Main Stack (Nested Architecture)
+
+Parameters:
+  DtnOperationTimeoutSeconds:
+    Type: Number
+  DtnRequestTimeoutSeconds:
+    Type: Number
+  DtnMaxAttempts:
+    Type: Number
+  DtnSerializationReserveSeconds:
+    Type: Number
+  AssetPrefix:
+    Type: String
+    Default: assets
+  ModelId:
+    Type: String
+    Description: Bedrock model or inference profile verified in the target account and region.
+  ReportModelId:
+    Type: String
+  RuntimeImageTag:
+    Type: String
+    Default: not-deployed
+  TemplatePrefix:
+    Type: String
+    Default: templates/nested
+  PublicDemoKnowledgeBaseId:
+    Type: String
+    Default: ""
+    AllowedPattern: "^$|^[A-Z0-9]{10}$"
+    Description: Optional knowledge base containing only documents approved for anonymous public retrieval.
+  SimulationInternalUrl:
+    Type: String
+    Default: ""
+  SimulationContextSecretArn:
+    Type: String
+    Default: ""
+  SimulationAdapterSecurityGroupId:
+    Type: String
+    Default: ""
+  SimulationAdapterSubnetIds:
+    Type: String
+    Default: ""
+  GeocodeServiceS3Version:
+    Type: String
+  WildfireServiceS3Version:
+    Type: String
+  SimulationServiceS3Version:
+    Type: String
+    Default: ""
+  # No default: every deploy passes [aws] environment from the installation file (deploy_backend.py).
+  Environment:
+    Type: String
+    Description: Environment name
+    AllowedValues:
+      - development
+      - staging
+      - production
+
+  # No default: every deploy passes [aws] operator_role_arns (D52). The pattern is OPERATOR_ROLE_ARN in
+  # deployment/installation.py and deployment/infra/lib/bucket-access.ts; CloudFormation applies it to each entry.
+  OperatorRoleArns:
+    Type: CommaDelimitedList
+    AllowedPattern: "arn:aws:iam::[0-9]{12}:role/(?:[A-Za-z0-9+=.@_-]+/)*[A-Za-z0-9+=.@_-]{1,64}"
+    Description: "[aws] operator_role_arns in the installation file: IAM roles (deployer, break-glass) that may read and write this installation's bucket objects."
+
+  DeployRuntime:
+    Type: String
+    Default: "true"
+    Description: Whether to deploy the Runtime (set to true after container image is built)
+    AllowedValues:
+      - "true"
+      - "false"
+
+  ProjectName:
+    Type: String
+    Description: Project name for tagging
+    Default: WildfireDataFabric
+
+  LambdaCodeBucket:
+    Type: String
+    Description: S3 bucket containing Lambda deployment packages
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+    ConstraintDescription: "Bucket name must be 3-63 lowercase letters, numbers, or hyphens"
+
+  NasaFirmsApiKey:
+    Type: String
+    Description: NASA FIRMS API Key
+    NoEcho: true
+
+  DTNClientId:
+    Type: String
+    Description: DTN Weather Client ID
+    NoEcho: true
+
+  DTNClientSecret:
+    Type: String
+    Description: DTN Weather Client Secret
+    NoEcho: true
+
+  RuntimeSourceBucket:
+    Type: String
+    Description: S3 bucket for runtime source code (required)
+    MinLength: 1
+    MaxLength: 63
+    AllowedPattern: "^[a-z0-9][a-z0-9-]*[a-z0-9]$"
+    ConstraintDescription: "Bucket name must be 3-63 lowercase letters, numbers, or hyphens. Cannot start/end with hyphen."
+
+  # AWS-recommended approach: Use S3ObjectVersion to trigger Lambda code updates
+  # See: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-lambda-function-code.html
+  WeatherDTNServiceS3Version:
+    Type: String
+    Description: S3 object version ID for weather-dtn-service Lambda package
+    Default: ""
+
+  DeploymentTimestamp:
+    Type: String
+    Description: Deployment timestamp for runtime environment tracking (not used for Lambda code updates)
+    Default: "20250101000000"
+
+Conditions:
+  ShouldDeployRuntime: !Equals
+    - !Ref DeployRuntime
+    - "true"
+
+Resources:
+  # ============================================================================
+  # Nested Stack 1: Infrastructure (S3, Secrets, ECR, IAM Roles)
+  # ============================================================================
+
+  InfrastructureStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub https://s3.${AWS::Region}.amazonaws.com/${RuntimeSourceBucket}/${TemplatePrefix}/1-infrastructure.yaml
+      Parameters:
+        Environment: !Ref Environment
+        ParentStackName: !Ref AWS::StackName
+        ProjectName: !Ref ProjectName
+        NasaFirmsApiKey: !Ref NasaFirmsApiKey
+        DTNClientId: !Ref DTNClientId
+        DTNClientSecret: !Ref DTNClientSecret
+        DeploymentTimestamp: !Ref DeploymentTimestamp
+        OperatorRoleArns: !Join [",", !Ref OperatorRoleArns]
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: StackType
+          Value: Infrastructure
+
+  # ============================================================================
+  # Nested Stack 2: Lambda Functions (Gateway + Custom Resources)
+  # ============================================================================
+
+  LambdaFunctionsStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: InfrastructureStack
+    Properties:
+      TemplateURL: !Sub https://s3.${AWS::Region}.amazonaws.com/${RuntimeSourceBucket}/${TemplatePrefix}/2-lambda-functions.yaml
+      Parameters:
+        DtnOperationTimeoutSeconds: !Ref DtnOperationTimeoutSeconds
+        DtnRequestTimeoutSeconds: !Ref DtnRequestTimeoutSeconds
+        DtnMaxAttempts: !Ref DtnMaxAttempts
+        DtnSerializationReserveSeconds: !Ref DtnSerializationReserveSeconds
+        AssetPrefix: !Ref AssetPrefix
+        SimulationInternalUrl: !Ref SimulationInternalUrl
+        SimulationAdapterSecurityGroupId: !Ref SimulationAdapterSecurityGroupId
+        SimulationAdapterSubnetIds: !Ref SimulationAdapterSubnetIds
+        SimulationServiceS3Version: !Ref SimulationServiceS3Version
+        GeocodeServiceS3Version: !Ref GeocodeServiceS3Version
+        WildfireServiceS3Version: !Ref WildfireServiceS3Version
+        Environment: !Ref Environment
+        ParentStackName: !Ref AWS::StackName
+        ProjectName: !Ref ProjectName
+        LambdaCodeBucket: !Ref LambdaCodeBucket
+        LambdaExecutionRoleArn: !GetAtt InfrastructureStack.Outputs.LambdaExecutionRoleArn
+        CustomResourceLambdaRoleArn: !GetAtt InfrastructureStack.Outputs.CustomResourceLambdaRoleArn
+        APIKeysSecretArn: !GetAtt InfrastructureStack.Outputs.APIKeysSecretArn
+        WeatherDTNServiceS3Version: !Ref WeatherDTNServiceS3Version
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: StackType
+          Value: LambdaFunctions
+
+  # ============================================================================
+  # Nested Stack 3: Cognito Authentication
+  # ============================================================================
+
+  CognitoAuthStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: LambdaFunctionsStack
+    Properties:
+      TemplateURL: !Sub https://s3.${AWS::Region}.amazonaws.com/${RuntimeSourceBucket}/${TemplatePrefix}/3-cognito-auth.yaml
+      Parameters:
+        Environment: !Ref Environment
+        ProjectName: !Ref ProjectName
+        ParentStackName: !Ref AWS::StackName
+        GetCognitoClientSecretFunctionArn: !GetAtt LambdaFunctionsStack.Outputs.GetCognitoClientSecretFunctionArn
+        CustomResourceLambdaRoleArn: !GetAtt InfrastructureStack.Outputs.CustomResourceLambdaRoleArn
+        StackEncryptionKeyArn: !GetAtt InfrastructureStack.Outputs.StackEncryptionKeyArn
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: StackType
+          Value: CognitoAuth
+
+  # ============================================================================
+  # Nested Stack 4: Bedrock Guardrails
+  # ============================================================================
+
+  BedrockGuardrailsStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - InfrastructureStack
+      - LambdaFunctionsStack
+    Properties:
+      TemplateURL: !Sub https://s3.${AWS::Region}.amazonaws.com/${RuntimeSourceBucket}/${TemplatePrefix}/5-bedrock-guardrails.yaml
+      Parameters:
+        Environment: !Ref Environment
+        ProjectName: !Ref ProjectName
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: StackType
+          Value: BedrockGuardrails
+
+  # ============================================================================
+  # Nested Stack 5: AgentCore Resources (Gateway, Runtime, Targets, CodeBuild)
+  # ============================================================================
+
+  AgentCoreStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn:
+      - InfrastructureStack
+      - LambdaFunctionsStack
+      - CognitoAuthStack
+      - BedrockGuardrailsStack
+    Properties:
+      TemplateURL: !Sub https://s3.${AWS::Region}.amazonaws.com/${RuntimeSourceBucket}/${TemplatePrefix}/4-agentcore-resources.yaml
+      Parameters:
+        ModelId: !Ref ModelId
+        ReportModelId: !Ref ReportModelId
+        RuntimeImageTag: !Ref RuntimeImageTag
+        PublicDemoKnowledgeBaseId: !Ref PublicDemoKnowledgeBaseId
+        AssetPrefix: !Ref AssetPrefix
+        SimulationInternalUrl: !Ref SimulationInternalUrl
+        SimulationContextSecretArn: !Ref SimulationContextSecretArn
+        SimulationServiceArn: !GetAtt LambdaFunctionsStack.Outputs.SimulationServiceArn
+        GeocodeServiceArn: !GetAtt LambdaFunctionsStack.Outputs.GeocodeServiceArn
+        WildfireServiceArn: !GetAtt LambdaFunctionsStack.Outputs.WildfireServiceArn
+        Environment: !Ref Environment
+        ParentStackName: !Ref AWS::StackName
+        ProjectName: !Ref ProjectName
+        DeployRuntime: !Ref DeployRuntime
+        RuntimeSourceBucket: !Ref RuntimeSourceBucket
+        # Infrastructure Stack Outputs
+        StackEncryptionKeyArn: !GetAtt InfrastructureStack.Outputs.StackEncryptionKeyArn
+        RuntimeECRRepositoryName: !GetAtt InfrastructureStack.Outputs.RuntimeECRRepositoryName
+        RuntimeExecutionRoleArn: !GetAtt InfrastructureStack.Outputs.RuntimeExecutionRoleArn
+        GatewayExecutionRoleArn: !GetAtt InfrastructureStack.Outputs.GatewayExecutionRoleArn
+        VoiceMessageBucketName: !GetAtt InfrastructureStack.Outputs.VoiceMessageBucketName
+        ReportImagesBucketName: !GetAtt InfrastructureStack.Outputs.ReportImagesBucketName
+        # Lambda Functions Stack Outputs
+        WeatherDTNServiceArn: !GetAtt LambdaFunctionsStack.Outputs.WeatherDTNServiceArn
+        # Cognito Stack Outputs
+        CognitoUserPoolId: !GetAtt CognitoAuthStack.Outputs.CognitoUserPoolId
+        CognitoClientId: !GetAtt CognitoAuthStack.Outputs.CognitoClientId
+        GatewayClientSecretArn: !GetAtt CognitoAuthStack.Outputs.GatewayClientSecretArn
+        CognitoTokenEndpoint: !GetAtt CognitoAuthStack.Outputs.CognitoTokenEndpoint
+        # Bedrock Guardrails Stack Outputs
+        GuardrailId: !GetAtt BedrockGuardrailsStack.Outputs.GuardrailId
+        GuardrailVersion: !GetAtt BedrockGuardrailsStack.Outputs.GuardrailVersion
+      Tags:
+        - Key: Project
+          Value: !Ref ProjectName
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: StackType
+          Value: AgentCore
+
+Outputs:
+  GeocodeServiceArn:
+    Value: !GetAtt LambdaFunctionsStack.Outputs.GeocodeServiceArn
+  WildfireServiceArn:
+    Value: !GetAtt LambdaFunctionsStack.Outputs.WildfireServiceArn
+  # Infrastructure
+  RuntimeECRRepositoryUri:
+    Description: ECR Repository URI for Runtime Container
+    Value: !GetAtt InfrastructureStack.Outputs.RuntimeECRRepositoryUri
+
+  RuntimeSourceBucket:
+    Description: S3 Bucket for Runtime Source Code
+    Value: !Ref RuntimeSourceBucket
+
+  VoiceMessageBucketName:
+    Description: S3 Bucket for voice messages
+    Value: !GetAtt InfrastructureStack.Outputs.VoiceMessageBucketName
+
+  ReportImagesBucketName:
+    Description: S3 Bucket for report images
+    Value: !GetAtt InfrastructureStack.Outputs.ReportImagesBucketName
+
+  APIKeysSecretArn:
+    Description: Secrets Manager ARN for API keys
+    Value: !GetAtt InfrastructureStack.Outputs.APIKeysSecretArn
+
+  # IAM Roles
+  LambdaExecutionRoleArn:
+    Description: Lambda Execution Role ARN
+    Value: !GetAtt InfrastructureStack.Outputs.LambdaExecutionRoleArn
+
+  RuntimeExecutionRoleArn:
+    Description: Runtime Execution Role ARN
+    Value: !GetAtt InfrastructureStack.Outputs.RuntimeExecutionRoleArn
+
+  GatewayExecutionRoleArn:
+    Description: Gateway Execution Role ARN
+    Value: !GetAtt InfrastructureStack.Outputs.GatewayExecutionRoleArn
+
+  # Lambda Functions
+  WeatherDTNServiceArn:
+    Description: Weather DTN Service Lambda ARN
+    Value: !GetAtt LambdaFunctionsStack.Outputs.WeatherDTNServiceArn
+
+  # Cognito
+  CognitoUserPoolId:
+    Description: Cognito User Pool ID
+    Value: !GetAtt CognitoAuthStack.Outputs.CognitoUserPoolId
+
+  CognitoClientId:
+    Description: Cognito App Client ID
+    Value: !GetAtt CognitoAuthStack.Outputs.CognitoClientId
+
+  CognitoDomain:
+    Description: Cognito Domain
+    Value: !GetAtt CognitoAuthStack.Outputs.CognitoDomain
+
+  CognitoTokenEndpoint:
+    Description: Cognito Token Endpoint
+    Value: !GetAtt CognitoAuthStack.Outputs.CognitoTokenEndpoint
+
+  # The ARN only, for the rotation runbook (architecture/45); deployment_target.safe_outputs never records it.
+  GatewayClientSecretArn:
+    Description: Secrets Manager secret holding the AgentCore Runtime's copy of the gateway client secret
+    Value: !GetAtt CognitoAuthStack.Outputs.GatewayClientSecretArn
+
+  ScopeString:
+    Description: OAuth scope string for Gateway authentication
+    Value: !GetAtt CognitoAuthStack.Outputs.ScopeString
+
+  # Bedrock Guardrails
+  GuardrailId:
+    Description: Bedrock Guardrail ID that every agent model uses
+    Value: !GetAtt BedrockGuardrailsStack.Outputs.GuardrailId
+
+  GuardrailArn:
+    Description: Bedrock Guardrail ARN
+    Value: !GetAtt BedrockGuardrailsStack.Outputs.GuardrailArn
+
+  GuardrailVersion:
+    Description: Published (immutable) Bedrock Guardrail version number that every agent model uses
+    Value: !GetAtt BedrockGuardrailsStack.Outputs.GuardrailVersion
+
+  GuardrailName:
+    Description: Bedrock Guardrail name
+    Value: !GetAtt BedrockGuardrailsStack.Outputs.GuardrailName
+
+  # Gateway
+  GatewayArn:
+    Description: AgentCore Gateway ARN
+    Value: !GetAtt AgentCoreStack.Outputs.GatewayArn
+
+  GatewayUrl:
+    Description: AgentCore Gateway URL
+    Value: !GetAtt AgentCoreStack.Outputs.GatewayUrl
+
+  GatewayIdentifier:
+    Description: AgentCore Gateway Identifier
+    Value: !GetAtt AgentCoreStack.Outputs.GatewayIdentifier
+
+  # Runtime (Conditional outputs)
+  RuntimeArn:
+    Condition: ShouldDeployRuntime
+    Description: AgentCore Runtime ARN
+    Value: !GetAtt AgentCoreStack.Outputs.RuntimeArn
+
+  RuntimeId:
+    Condition: ShouldDeployRuntime
+    Description: AgentCore Runtime ID
+    Value: !GetAtt AgentCoreStack.Outputs.RuntimeId
+
+  # CodeBuild
+  CodeBuildProjectName:
+    Description: CodeBuild Project Name for Runtime container builds
+    Value: !GetAtt AgentCoreStack.Outputs.CodeBuildProjectName
+
+  # Memory
+  MemoryId:
+    Description: AgentCore Memory ID for SessionManager
+    Value: !GetAtt AgentCoreStack.Outputs.MemoryId
+
+  MemoryArn:
+    Description: AgentCore Memory ARN
+    Value: !GetAtt AgentCoreStack.Outputs.MemoryArn
+
+  # Stack Info
+  StackId:
+    Description: CloudFormation Stack ID
+    Value: !Ref AWS::StackId
+
+  DeploymentRegion:
+    Description: Deployment Region
+    Value: !Ref AWS::Region
+
+  DeploymentAccount:
+    Description: Deployment Account ID
+    Value: !Ref AWS::AccountId

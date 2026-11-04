@@ -1,0 +1,82 @@
+.fab {
+  position: fixed;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, #FF2D00, #FF6B35);
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(255, 45, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 24px rgba(255, 45, 0, 0.5);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+.fab:focus-visible {
+  outline: 2px solid #4da6ff;
+  outline-offset: 3px;
+}
+
+/* Position (FloatingActionButtonProps.position) */
+.fab--bottom-right {
+  bottom: 24px;
+  right: 24px;
+}
+
+/* Icon */
+.fab__icon {
+  font-size: 1.4em;
+  line-height: 1;
+}
+
+/* Badge */
+.fab__badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #1a1a2e;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #FF2D00;
+}
+
+.fab__badge--pulse {
+  animation: fab-badge-pulse 1.5s infinite;
+}
+
+@keyframes fab-badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .fab {
+    width: 48px;
+    height: 48px;
+  }
+
+  .fab--bottom-right {
+    bottom: 16px;
+    right: 16px;
+  }
+}
